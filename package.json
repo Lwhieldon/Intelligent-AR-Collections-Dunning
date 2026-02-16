@@ -25,7 +25,7 @@
     "@azure/openai": "^2.0.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@microsoft/teams-ai": "^1.7.4",
-    "axios": "^1.7.9",
+    "axios": "^1.13.5",
     "dotenv": "^16.4.7",
     "openai": "4.77.4"
   },
@@ -40,5 +40,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.55.0"
+  },
+  "overrides": {
+    "lodash.trimend": "^4.5.1"
   }
 }
