@@ -171,6 +171,8 @@ This solution addresses a critical enterprise need: managing accounts receivable
 │   ├── connectors/
 │   │   ├── erpConnector.ts             # ERP integration
 │   │   └── graphConnector.ts           # Microsoft Graph
+│   ├── utils/
+│   │   ├── discoverEntities.ts         # Discover Entities
 │   ├── types.ts                        # TypeScript interfaces
 │   └── index.ts                        # Entry point
 ├── docs/

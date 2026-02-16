@@ -282,8 +282,10 @@ src/
 │   ├── riskScoringService.ts    # Risk calculation & ML
 │   ├── dunningService.ts        # GenAI communication generation
 │   └── paymentPlanService.ts    # Payment plan creation
-├── types.ts                      # TypeScript interfaces
-└── index.ts                      # Main entry point
+├──  utils/
+│   └── discoverEntities.ts      # Discover Entities
+├── types.ts                         # TypeScript interfaces
+└── index.ts                         # Main entry point
 ```
 
 ### Testing

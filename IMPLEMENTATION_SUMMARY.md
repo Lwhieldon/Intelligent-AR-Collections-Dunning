@@ -94,6 +94,13 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
   - Batch processing of high-risk customers
   - Detailed risk analysis with full output
 
+### 10. Discover Entities
+**File**: `utils/discoverEntities.ts`
+- Discover what Entities you have in Dynamics 365 Environment:
+  - Authenticates using .env variables
+  - Identifies what you actively have in your tentnat
+  - Informs you if you need to install further apps (e.g., D265 Sales, Enterprise Edition App)
+
 ## Key Features Implemented
 
 ### ✅ AI/ML Capabilities
