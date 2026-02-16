@@ -1,6 +1,5 @@
 import { AzureOpenAI } from 'openai';
 import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity';
-import '@azure/openai/types';
 import { ARAgingData, RiskScore } from '../types';
 
 export class DunningService {

@@ -1,6 +1,5 @@
 import { AzureOpenAI } from 'openai';
 import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity';
-import '@azure/openai/types';
 import { RiskScore, ARAgingData, PaymentHistory, RiskFactor } from '../types';
 
 export class RiskScoringService {
