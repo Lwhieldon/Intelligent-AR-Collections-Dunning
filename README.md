@@ -1,8 +1,13 @@
 # 💰 Intelligent AR Collections & Dunning System
 
+> 🏆 **Microsoft Agents League - Enterprise Agents Track Submission**  
+> Built for the [Enterprise Agents competition](https://github.com/microsoft/agentsleague/tree/main/starter-kits/3-enterprise-agents)
+
 An AI-powered accounts receivable collections and dunning solution built with Microsoft 365 Agents Toolkit, Copilot Studio, Azure OpenAI, and Microsoft Graph.
 
 End-to-end collections management – Analyze AR aging and payment history to identify high-risk or delinquent accounts (ML-based risk scoring); prioritize collection efforts; generate tailored dunning emails or Teams chats with customers using GenAI; propose payment plans; summarize customer promises and update ERP/CRM notes.
+
+> ⚠️ **SECURITY NOTICE**: This is a public repository. Please read the [DISCLAIMER](DISCLAIMER.md) before contributing. Never commit credentials, secrets, or customer data.
 
 ## 🌟 Features
 
@@ -172,6 +177,44 @@ src/
 
 5. **Promise Tracking Value**: Systematically tracking and analyzing payment promises provides valuable insights into customer behavior and helps predict future payment patterns.
 
-## 📄 License
+## 🏆 Competition Criteria
 
-MIT License - See LICENSE file for details
+This project meets the following [Microsoft Agents League - Enterprise Agents](https://github.com/microsoft/agentsleague/tree/main/starter-kits/3-enterprise-agents) competition criteria:
+
+### Core Requirements ✅
+- **Microsoft 365 Copilot Chat Agent** - Declarative agent configured for M365 Agents Toolkit (`src/agents/declarativeAgent.json`)
+
+### Bonus Features ✅
+- **External MCP Server Integration** - ERP connector for read/write operations (`src/connectors/erpConnector.ts`)
+- **Adaptive Cards for UI/UX** - Action confirmations use Adaptive Cards in declarative agent
+- **Connected Architecture** - Multiple services (Risk Scoring, Dunning, Payment Plan) working together
+
+### Security & Best Practices ✅
+- Environment-based configuration (`.env.example` provided)
+- No hardcoded secrets
+- Comprehensive `.gitignore` for security
+- Microsoft Entra ID authentication ready
+- Audit logging implemented
+
+## 📚 Documentation
+
+- **[Setup Guide](SETUP.md)** - Detailed setup and configuration instructions
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
+- **[Copilot Studio Plugins](docs/COPILOT_STUDIO_PLUGINS.md)** - Plugin configuration guide
+- **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
+- **[Examples](examples/)** - Example workflows and usage patterns
+
+## 📄 License & Legal
+
+- **License**: MIT License - See [LICENSE](LICENSE) file for details
+- **Code of Conduct**: See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Security & Disclaimer**: See [DISCLAIMER.md](DISCLAIMER.md)
+
+## 🙏 Acknowledgments
+
+This project was created for the [Microsoft Agents League - Enterprise Agents Track](https://github.com/microsoft/agentsleague/tree/main/starter-kits/3-enterprise-agents) competition.
+
+Resources used:
+- [Copilot Dev Camp](https://aka.ms/copilotdevcamp)
+- [Agent Academy](https://aka.ms/agentacademy)
+- [Microsoft 365 Agents Toolkit Documentation](https://aka.ms/m365-agents-toolkit)
