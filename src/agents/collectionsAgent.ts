@@ -3,7 +3,7 @@ import { GraphConnector } from '../connectors/graphConnector';
 import { RiskScoringService } from '../services/riskScoringService';
 import { DunningService } from '../services/dunningService';
 import { PaymentPlanService } from '../services/paymentPlanService';
-import { RiskScore, CRMNote } from '../types';
+import { RiskScore, CRMNote, PrioritizedCustomer, PromiseSummary } from '../types';
 
 export class CollectionsAgent {
   private erpConnector: ERPConnector;
@@ -174,6 +174,85 @@ export class CollectionsAgent {
     }
 
     console.log('High-risk customer processing complete');
+  }
+
+  /**
+   * Prioritize collection efforts by analyzing all customers and returning a sorted list
+   * by risk score and outstanding balance
+   */
+  async prioritizeCollectionEfforts(): Promise<PrioritizedCustomer[]> {
+    console.log('Prioritizing collection efforts...');
+
+    const customerIds = await this.erpConnector.getCustomersWithOutstandingBalance();
+    const prioritizedCustomers: PrioritizedCustomer[] = [];
+
+    for (const customerId of customerIds) {
+      try {
+        const arData = await this.erpConnector.getARAgingData(customerId);
+        const riskScore = await this.analyzeCustomerRisk(customerId);
+
+        // Calculate priority score: risk score (0-1) * 70% + normalized outstanding amount * 30%
+        // This ensures high-risk accounts with large balances get highest priority
+        const normalizedAmount = Math.min(arData.totalOutstanding / 100000, 1); // Normalize to max $100k
+        const priority = (riskScore.score * 0.7) + (normalizedAmount * 0.3);
+
+        prioritizedCustomers.push({
+          customerId,
+          customerName: arData.customerName,
+          riskScore,
+          totalOutstanding: arData.totalOutstanding,
+          priority,
+        });
+      } catch (error) {
+        console.error(`Error analyzing customer ${customerId}:`, error);
+      }
+    }
+
+    // Sort by priority (highest first)
+    prioritizedCustomers.sort((a, b) => b.priority - a.priority);
+
+    console.log(`Collection efforts prioritized: ${prioritizedCustomers.length} customers analyzed`);
+    
+    return prioritizedCustomers;
+  }
+
+  /**
+   * Summarize customer promises to pay - provides analytics on promise fulfillment
+   */
+  async summarizeCustomerPromises(customerId: string): Promise<PromiseSummary> {
+    console.log(`Summarizing promises for customer ${customerId}...`);
+
+    const paymentHistory = await this.erpConnector.getPaymentHistory(customerId);
+    const arData = await this.erpConnector.getARAgingData(customerId);
+    const promises = paymentHistory.promiseToPayHistory;
+
+    const fulfilled = promises.filter(p => p.fulfilled).length;
+    const broken = promises.filter(p => !p.fulfilled && new Date(p.promisedDate) < new Date()).length;
+    const pending = promises.filter(p => !p.fulfilled && new Date(p.promisedDate) >= new Date()).length;
+    
+    const totalPromisedAmount = promises.reduce((sum, p) => sum + p.promisedAmount, 0);
+    const fulfillmentRate = promises.length > 0 ? fulfilled / promises.length : 0;
+
+    // Get recent promises (last 5)
+    const recentPromises = promises
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+
+    const summary: PromiseSummary = {
+      customerId,
+      customerName: arData.customerName,
+      totalPromises: promises.length,
+      fulfilledPromises: fulfilled,
+      brokenPromises: broken,
+      pendingPromises: pending,
+      totalPromisedAmount,
+      fulfillmentRate,
+      recentPromises,
+    };
+
+    console.log(`Promise summary complete: ${fulfilled}/${promises.length} fulfilled (${(fulfillmentRate * 100).toFixed(1)}%)`);
+
+    return summary;
   }
 
   /**

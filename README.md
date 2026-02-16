@@ -7,10 +7,10 @@ End-to-end collections management – Analyze AR aging and payment history to id
 ## 🌟 Features
 
 - **ML-Based Risk Scoring**: Analyze AR aging and payment history to identify high-risk accounts using Azure OpenAI
-- **Automated Prioritization**: Intelligently prioritize collection efforts based on risk levels
+- **Intelligent Prioritization**: Automatically prioritize collection efforts based on risk scores and outstanding balances
 - **GenAI-Powered Communications**: Generate personalized dunning emails and Teams messages
-- **Payment Plan Proposals**: Automatically create tailored payment plans
-- **Promise Tracking**: Track and monitor customer payment promises
+- **Payment Plan Proposals**: Automatically create tailored payment plans with amortization
+- **Promise Tracking & Summarization**: Track customer payment promises and analyze fulfillment rates
 - **ERP/CRM Integration**: Seamlessly update notes and data in your existing systems
 - **Multi-Channel Communication**: Reach customers via email (Outlook) and Teams
 
@@ -96,11 +96,22 @@ const agent = new CollectionsAgent();
 const riskScore = await agent.analyzeCustomerRisk('CUST-001');
 console.log(`Risk Level: ${riskScore.riskLevel}`);
 
+// Prioritize collection efforts across all customers
+const prioritizedCustomers = await agent.prioritizeCollectionEfforts();
+console.log(`Top priority: ${prioritizedCustomers[0].customerName}`);
+
+// Summarize customer payment promises
+const promiseSummary = await agent.summarizeCustomerPromises('CUST-001');
+console.log(`Fulfillment rate: ${promiseSummary.fulfillmentRate * 100}%`);
+
 // Send dunning email
 await agent.sendDunningEmail('CUST-001', 'customer@example.com');
 
 // Create payment plan
 await agent.proposePaymentPlan('CUST-001', 'customer@example.com', 6);
+
+// Record customer promise
+await agent.recordPromiseToPay('CUST-001', 5000, '2026-03-01', 'Payment committed');
 ```
 
 ## 📁 Project Structure

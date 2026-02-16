@@ -80,3 +80,23 @@ export interface CRMNote {
   content: string;
   category: 'promise-to-pay' | 'contact-attempt' | 'payment-plan' | 'general';
 }
+
+export interface PrioritizedCustomer {
+  customerId: string;
+  customerName: string;
+  riskScore: RiskScore;
+  totalOutstanding: number;
+  priority: number;
+}
+
+export interface PromiseSummary {
+  customerId: string;
+  customerName: string;
+  totalPromises: number;
+  fulfilledPromises: number;
+  brokenPromises: number;
+  pendingPromises: number;
+  totalPromisedAmount: number;
+  fulfillmentRate: number;
+  recentPromises: PromiseToPay[];
+}
