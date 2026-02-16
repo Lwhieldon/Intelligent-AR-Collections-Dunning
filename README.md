@@ -46,6 +46,13 @@ End-to-end collections management – Analyze AR aging and payment history to id
 
 ### Installation
 
+1. Clone the repository:
+```bash
+git clone https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning.git
+cd Intelligent-AR-Collections-Dunning
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
