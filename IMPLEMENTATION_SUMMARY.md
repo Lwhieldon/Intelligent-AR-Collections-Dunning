@@ -138,7 +138,7 @@ Updated main README with:
 - Usage examples
 - Risk scoring algorithm details
 
-### 2. SETUP.md
+### 2. docs/SETUP.md
 Comprehensive setup guide including:
 - Prerequisites and installation
 - Configuration instructions
