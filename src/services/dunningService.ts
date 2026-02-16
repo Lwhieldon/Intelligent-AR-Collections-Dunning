@@ -1,15 +1,14 @@
-import { AzureOpenAI } from '@azure/openai';
-import { ARAgingData, PaymentHistory, RiskScore } from '../types';
+import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
+import { ARAgingData, RiskScore } from '../types';
 
 export class DunningService {
-  private client: AzureOpenAI;
+  private client: OpenAIClient;
   private deploymentName: string;
 
   constructor() {
-    this.client = new AzureOpenAI({
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
-      apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-    });
+    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || '';
+    const apiKey = process.env.AZURE_OPENAI_API_KEY || '';
+    this.client = new OpenAIClient(endpoint, new AzureKeyCredential(apiKey));
     this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4';
   }
 
@@ -46,9 +45,9 @@ The email should:
 Format the response as JSON with "subject" and "body" fields. The body should be in HTML format.`;
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: this.deploymentName,
-        messages: [
+      const response = await this.client.getChatCompletions(
+        this.deploymentName,
+        [
           {
             role: 'system',
             content: 'You are a professional collections specialist who writes effective but respectful dunning communications. Always format your response as valid JSON.',
@@ -58,9 +57,11 @@ Format the response as JSON with "subject" and "body" fields. The body should be
             content: prompt,
           },
         ],
-        max_tokens: 800,
-        temperature: 0.7,
-      });
+        {
+          maxTokens: 800,
+          temperature: 0.7,
+        }
+      );
 
       const content = response.choices[0]?.message?.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -102,9 +103,9 @@ The message should be:
 4. No more than 3-4 sentences`;
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: this.deploymentName,
-        messages: [
+      const response = await this.client.getChatCompletions(
+        this.deploymentName,
+        [
           {
             role: 'system',
             content: 'You are a professional collections specialist writing a Teams message. Keep it brief and conversational.',
@@ -114,9 +115,11 @@ The message should be:
             content: prompt,
           },
         ],
-        max_tokens: 200,
-        temperature: 0.7,
-      });
+        {
+          maxTokens: 200,
+          temperature: 0.7,
+        }
+      );
 
       return response.choices[0]?.message?.content || this.getFallbackTeamsMessage(customerName, arData);
     } catch (error) {

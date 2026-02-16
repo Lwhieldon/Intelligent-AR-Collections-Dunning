@@ -3,7 +3,7 @@ import { GraphConnector } from '../connectors/graphConnector';
 import { RiskScoringService } from '../services/riskScoringService';
 import { DunningService } from '../services/dunningService';
 import { PaymentPlanService } from '../services/paymentPlanService';
-import { ARAgingData, PaymentHistory, RiskScore, CRMNote } from '../types';
+import { RiskScore, CRMNote } from '../types';
 
 export class CollectionsAgent {
   private erpConnector: ERPConnector;

@@ -1,15 +1,14 @@
-import { AzureOpenAI } from '@azure/openai';
+import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
 import { RiskScore, ARAgingData, PaymentHistory, RiskFactor } from '../types';
 
 export class RiskScoringService {
-  private client: AzureOpenAI;
+  private client: OpenAIClient;
   private deploymentName: string;
 
   constructor() {
-    this.client = new AzureOpenAI({
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
-      apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-    });
+    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || '';
+    const apiKey = process.env.AZURE_OPENAI_API_KEY || '';
+    this.client = new OpenAIClient(endpoint, new AzureKeyCredential(apiKey));
     this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4';
   }
 
@@ -158,9 +157,9 @@ ${factors.map(f => `- ${f.factor}: ${f.description}`).join('\n')}
 Provide a concise recommendation (2-3 sentences) on the best collection approach.`;
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: this.deploymentName,
-        messages: [
+      const response = await this.client.getChatCompletions(
+        this.deploymentName,
+        [
           {
             role: 'system',
             content: 'You are an expert collections specialist. Provide clear, actionable recommendations.',
@@ -170,9 +169,11 @@ Provide a concise recommendation (2-3 sentences) on the best collection approach
             content: prompt,
           },
         ],
-        max_tokens: 200,
-        temperature: 0.7,
-      });
+        {
+          maxTokens: 200,
+          temperature: 0.7,
+        }
+      );
 
       return response.choices[0]?.message?.content || 'Contact customer to discuss payment options.';
     } catch (error) {

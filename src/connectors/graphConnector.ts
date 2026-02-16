@@ -123,7 +123,7 @@ export class GraphConnector {
   /**
    * Get user information
    */
-  async getUserInfo(userEmail: string): Promise<any> {
+  async getUserInfo(userEmail: string): Promise<Record<string, unknown>> {
     try {
       return await this.client.api(`/users/${userEmail}`).get();
     } catch (error) {
