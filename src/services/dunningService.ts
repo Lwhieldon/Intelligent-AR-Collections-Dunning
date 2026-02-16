@@ -1,15 +1,36 @@
-import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
+import { AzureOpenAI } from 'openai';
+import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity';
 import { ARAgingData, RiskScore } from '../types';
 
 export class DunningService {
-  private client: OpenAIClient;
+  private client: AzureOpenAI;
   private deploymentName: string;
 
   constructor() {
     const endpoint = process.env.AZURE_OPENAI_ENDPOINT || '';
     const apiKey = process.env.AZURE_OPENAI_API_KEY || '';
-    this.client = new OpenAIClient(endpoint, new AzureKeyCredential(apiKey));
+    const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
     this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4';
+    
+    // Use Microsoft Entra ID if API key is not provided, otherwise use API key
+    if (!apiKey) {
+      const credential = new DefaultAzureCredential();
+      const scope = 'https://cognitiveservices.azure.com/.default';
+      const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+      this.client = new AzureOpenAI({
+        endpoint,
+        azureADTokenProvider,
+        deployment: this.deploymentName,
+        apiVersion,
+      });
+    } else {
+      this.client = new AzureOpenAI({
+        endpoint,
+        apiKey,
+        deployment: this.deploymentName,
+        apiVersion,
+      });
+    }
   }
 
   /**
@@ -45,9 +66,9 @@ The email should:
 Format the response as JSON with "subject" and "body" fields. The body should be in HTML format.`;
 
     try {
-      const response = await this.client.getChatCompletions(
-        this.deploymentName,
-        [
+      const response = await this.client.chat.completions.create({
+        model: this.deploymentName,
+        messages: [
           {
             role: 'system',
             content: 'You are a professional collections specialist who writes effective but respectful dunning communications. Always format your response as valid JSON.',
@@ -57,11 +78,9 @@ Format the response as JSON with "subject" and "body" fields. The body should be
             content: prompt,
           },
         ],
-        {
-          maxTokens: 800,
-          temperature: 0.7,
-        }
-      );
+        max_tokens: 800,
+        temperature: 0.7,
+      });
 
       const content = response.choices[0]?.message?.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -103,9 +122,9 @@ The message should be:
 4. No more than 3-4 sentences`;
 
     try {
-      const response = await this.client.getChatCompletions(
-        this.deploymentName,
-        [
+      const response = await this.client.chat.completions.create({
+        model: this.deploymentName,
+        messages: [
           {
             role: 'system',
             content: 'You are a professional collections specialist writing a Teams message. Keep it brief and conversational.',
@@ -115,11 +134,9 @@ The message should be:
             content: prompt,
           },
         ],
-        {
-          maxTokens: 200,
-          temperature: 0.7,
-        }
-      );
+        max_tokens: 200,
+        temperature: 0.7,
+      });
 
       return response.choices[0]?.message?.content || this.getFallbackTeamsMessage(customerName, arData);
     } catch (error) {
