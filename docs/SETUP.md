@@ -61,22 +61,126 @@ cp .env.example .env
 # Azure OpenAI Configuration
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-api-key
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5
+AZURE_OPENAI_API_VERSION=2025-08-07
 
 # Microsoft Graph Configuration
 GRAPH_CLIENT_ID=your-client-id
 GRAPH_CLIENT_SECRET=your-client-secret
 GRAPH_TENANT_ID=your-tenant-id
 
-# ERP Configuration
-ERP_API_ENDPOINT=https://your-erp-system.com/api
-ERP_API_KEY=your-erp-api-key
+# ERP Configuration (Dynamics 365)
+ERP_API_ENDPOINT=https://your-org.api.crm.dynamics.com/api/data/v9.2
+ERP_CLIENT_ID=your-client-id
+ERP_CLIENT_SECRET=your-client-secret
+ERP_TENANT_ID=your-tenant-id
+ERP_RESOURCE=https://your-org.api.crm.dynamics.com/
 
 # Application Settings
 PORT=3000
 RISK_THRESHOLD_HIGH=0.7
 RISK_THRESHOLD_MEDIUM=0.4
 ```
+
+### Detailed Configuration Steps
+
+#### 1. Azure OpenAI Setup
+
+1. Go to the [Azure Portal](https://portal.azure.com)
+2. Create an Azure OpenAI resource or use an existing one
+3. Navigate to **Keys and Endpoint**
+4. Copy the endpoint URL and one of the keys
+5. Create a GPT-5 deployment and note the deployment name
+6. Update `.env` with these values
+
+#### 2. Microsoft Graph Configuration
+
+1. Go to the [Azure Portal](https://portal.azure.com)
+2. Navigate to **Azure Active Directory** → **App registrations** → **New registration**
+3. Register an app for Microsoft Graph access
+4. Copy the **Application (client) ID** and **Directory (tenant) ID**
+5. Go to **Certificates & secrets** → Create a new client secret
+6. Copy the secret value
+7. Go to **API permissions** → Add the following Microsoft Graph permissions:
+   - `Mail.Send` (for sending emails)
+   - `Chat.Create` (for Teams messaging)
+   - `User.Read.All` (for user lookups)
+8. Grant admin consent for your organization
+9. Update `.env` with these credentials
+
+#### 3. Dynamics 365 ERP Configuration (OAuth2)
+
+The system uses **OAuth2 authentication** to connect to Dynamics 365 via the Azure AD client credentials flow.
+
+##### Step 1: Register an Azure AD Application
+
+1. Go to the [Azure Portal](https://portal.azure.com)
+2. Navigate to **Azure Active Directory** → **App registrations** → **New registration**
+3. Provide a name (e.g., "AR Collections App")
+4. Select **Accounts in this organizational directory only**
+5. Click **Register**
+
+##### Step 2: Get Application Credentials
+
+1. From the app overview page, copy the **Application (client) ID**
+2. Copy the **Directory (tenant) ID**
+3. Go to **Certificates & secrets** → **Client secrets** → **New client secret**
+4. Add a description (e.g., "AR Collections Secret") and set expiration
+5. Click **Add** and immediately copy the **Value** (not the Secret ID)
+   - ⚠️ **Important**: The secret value is only shown once! Store it securely.
+
+##### Step 3: Grant Dynamics 365 API Permissions
+
+1. Go to **API permissions** → **Add a permission**
+2. Select **Dynamics CRM** (or **APIs my organization uses** → search "Dynamics CRM")
+3. Select **Application permissions** (for service-to-service access)
+4. Check **user_impersonation** permission
+5. Click **Add permissions**
+6. Click **Grant admin consent for [Your Organization]**
+
+##### Step 4: Configure Dynamics 365 Application User
+
+1. Log in to your Dynamics 365 environment as an administrator
+2. Go to **Settings** → **Security** → **Users**
+3. Change the view to **Application Users**
+4. Click **New** → Select **Application User** form
+5. Fill in the following:
+   - **Application ID**: The Client ID from Azure AD
+   - **Full Name**: A descriptive name (e.g., "AR Collections Service")
+   - **Primary Email**: An email address for notifications
+6. Click **Save**
+7. Assign the appropriate security roles:
+   - **System Administrator** (for full access) or
+   - Custom security role with read/write permissions for relevant entities
+
+##### Step 5: Update .env File
+
+Update your `.env` file with the credentials:
+
+```env
+# ERP Configuration (Dynamics 365)
+ERP_API_ENDPOINT=https://your-org.api.crm.dynamics.com/api/data/v9.2
+ERP_CLIENT_ID=<your-application-client-id>
+ERP_CLIENT_SECRET=<your-client-secret-value>
+ERP_TENANT_ID=<your-tenant-id>
+ERP_RESOURCE=https://your-org.api.crm.dynamics.com/
+```
+
+**Finding your Dynamics 365 API Endpoint:**
+- Log in to Dynamics 365
+- Go to **Settings** → **Customizations** → **Developer Resources**
+- Copy the **Web API** URL (e.g., `https://org12345678.api.crm.dynamics.com/api/data/v9.2`)
+
+##### Step 6: Test Authentication
+
+After configuration, rebuild and test the connection:
+
+```bash
+npm run build
+npm start
+```
+
+The system will automatically obtain OAuth2 access tokens and use them for all Dynamics 365 API calls.
 
 ### Build
 

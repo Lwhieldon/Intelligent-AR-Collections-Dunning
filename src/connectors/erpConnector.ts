@@ -1,13 +1,39 @@
 import axios from 'axios';
+import { ClientSecretCredential } from '@azure/identity';
 import { ARAgingData, PaymentHistory } from '../types';
 
 export class ERPConnector {
   private apiEndpoint: string;
-  private apiKey: string;
+  private credential: ClientSecretCredential;
+  private resource: string;
 
   constructor() {
     this.apiEndpoint = process.env.ERP_API_ENDPOINT || '';
-    this.apiKey = process.env.ERP_API_KEY || '';
+    this.resource = process.env.ERP_RESOURCE || '';
+
+    const tenantId = process.env.ERP_TENANT_ID || '';
+    const clientId = process.env.ERP_CLIENT_ID || '';
+    const clientSecret = process.env.ERP_CLIENT_SECRET || '';
+
+    this.credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+  }
+
+  /**
+   * Get an access token for Dynamics 365 API
+   */
+  private async getAccessToken(): Promise<string> {
+    try {
+      // Remove trailing slash from resource if present
+      const scope = this.resource.endsWith('/')
+        ? `${this.resource}.default`
+        : `${this.resource}/.default`;
+
+      const tokenResponse = await this.credential.getToken(scope);
+      return tokenResponse.token;
+    } catch (error) {
+      console.error('Error getting access token:', error);
+      throw new Error('Failed to authenticate with Dynamics 365');
+    }
   }
 
   /**
@@ -15,9 +41,10 @@ export class ERPConnector {
    */
   async getARAgingData(customerId: string): Promise<ARAgingData> {
     try {
+      const token = await this.getAccessToken();
       const response = await axios.get(`${this.apiEndpoint}/ar-aging/${customerId}`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -34,9 +61,10 @@ export class ERPConnector {
    */
   async getPaymentHistory(customerId: string): Promise<PaymentHistory> {
     try {
+      const token = await this.getAccessToken();
       const response = await axios.get(`${this.apiEndpoint}/payment-history/${customerId}`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -53,9 +81,10 @@ export class ERPConnector {
    */
   async getCustomersWithOutstandingBalance(): Promise<string[]> {
     try {
+      const token = await this.getAccessToken();
       const response = await axios.get(`${this.apiEndpoint}/customers/outstanding`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -72,12 +101,13 @@ export class ERPConnector {
    */
   async updateCustomerNotes(customerId: string, note: string): Promise<void> {
     try {
+      const token = await this.getAccessToken();
       await axios.post(
         `${this.apiEndpoint}/customers/${customerId}/notes`,
         { note, timestamp: new Date().toISOString() },
         {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }

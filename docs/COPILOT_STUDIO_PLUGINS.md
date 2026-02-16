@@ -17,18 +17,21 @@ The system uses Copilot Studio with custom plugins to enable conversational AI f
 
 #### AR Aging Connector
 
-**Purpose**: Retrieve accounts receivable aging data from ERP system
+**Purpose**: Retrieve accounts receivable aging data from Dynamics 365 ERP system
 
 **Configuration**:
 ```json
 {
   "name": "ar_aging_connector",
-  "description": "Retrieves AR aging data for customers",
+  "description": "Retrieves AR aging data for customers from Dynamics 365",
   "api_endpoint": "${ERP_API_ENDPOINT}/ar-aging",
   "authentication": {
-    "type": "api_key",
-    "header": "Authorization",
-    "value": "Bearer ${ERP_API_KEY}"
+    "type": "oauth2",
+    "grant_type": "client_credentials",
+    "token_url": "https://login.microsoftonline.com/${ERP_TENANT_ID}/oauth2/v2.0/token",
+    "client_id": "${ERP_CLIENT_ID}",
+    "client_secret": "${ERP_CLIENT_SECRET}",
+    "scope": "${ERP_RESOURCE}/.default"
   },
   "operations": [
     {
@@ -50,18 +53,21 @@ The system uses Copilot Studio with custom plugins to enable conversational AI f
 
 #### Payment History Connector
 
-**Purpose**: Retrieve payment history for customers
+**Purpose**: Retrieve payment history for customers from Dynamics 365
 
 **Configuration**:
 ```json
 {
   "name": "payment_history_connector",
-  "description": "Retrieves payment history for customers",
+  "description": "Retrieves payment history for customers from Dynamics 365",
   "api_endpoint": "${ERP_API_ENDPOINT}/payment-history",
   "authentication": {
-    "type": "api_key",
-    "header": "Authorization",
-    "value": "Bearer ${ERP_API_KEY}"
+    "type": "oauth2",
+    "grant_type": "client_credentials",
+    "token_url": "https://login.microsoftonline.com/${ERP_TENANT_ID}/oauth2/v2.0/token",
+    "client_id": "${ERP_CLIENT_ID}",
+    "client_secret": "${ERP_CLIENT_SECRET}",
+    "scope": "${ERP_RESOURCE}/.default"
   },
   "operations": [
     {
@@ -97,9 +103,32 @@ The system uses Copilot Studio with custom plugins to enable conversational AI f
 3. Select `src/agents/declarativeAgent.json`
 4. Configure action endpoints to point to your deployed service
 
+## Authentication Details
+
+### OAuth2 Authentication with Dynamics 365
+
+The connectors use OAuth2 client credentials flow to authenticate with Dynamics 365:
+
+1. **Token Acquisition**: The system automatically requests an access token from Azure AD using the configured client credentials
+2. **Token Caching**: Access tokens are cached and automatically refreshed when expired
+3. **Secure Storage**: Client secrets should be stored in Azure Key Vault and referenced via environment variables
+
+### Required Azure AD Setup
+
+Before using these connectors, ensure:
+1. An Azure AD application is registered with appropriate permissions
+2. The application has been granted access to your Dynamics 365 instance
+3. An application user exists in Dynamics 365 with the necessary security roles
+4. The `ERP_CLIENT_ID`, `ERP_CLIENT_SECRET`, `ERP_TENANT_ID`, and `ERP_RESOURCE` environment variables are configured
+
+See [SETUP.md](docs/SETUP.md) for detailed configuration instructions.
+
 ## Security Considerations
 
-- All API keys should be stored in Azure Key Vault
+- All client secrets should be stored in Azure Key Vault
 - Use managed identities where possible
 - Implement rate limiting on API endpoints
 - Audit all collection actions
+- Regularly rotate client secrets (recommended: every 90 days)
+- Use Azure AD conditional access policies to restrict access
+- Monitor authentication failures and anomalous access patterns

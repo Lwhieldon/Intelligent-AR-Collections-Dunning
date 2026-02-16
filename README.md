@@ -69,7 +69,7 @@ npm install
 cp .env.example .env
 ```
 
-2. Configure your environment variables in `.env`
+2. Configure your environment variables in `.env`. See [SETUP.md](docs/SETUP.md) for detailed configuration instructions, especially for Dynamics 365 OAuth2 authentication
 
 ### Build and Run
 
@@ -80,7 +80,7 @@ npm start
 
 ## 📖 Documentation
 
-- [Setup Guide](SETUP.md) - Detailed setup and configuration instructions
+- [Setup Guide](docs/SETUP.md) - Detailed setup and configuration instructions
 - [Copilot Studio Plugins](docs/COPILOT_STUDIO_PLUGINS.md) - Plugin configuration guide
 - [Examples](examples/) - Example workflows and usage patterns
 
@@ -198,7 +198,7 @@ This project meets the following [Microsoft Agents League - Enterprise Agents](h
 
 ## 📚 Documentation
 
-- **[Setup Guide](SETUP.md)** - Detailed setup and configuration instructions
+- **[Setup Guide](docs/SETUP.md)** - Detailed setup and configuration instructions
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
 - **[Copilot Studio Plugins](docs/COPILOT_STUDIO_PLUGINS.md)** - Plugin configuration guide
 - **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
