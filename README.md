@@ -1,4 +1,4 @@
-# Intelligent AR Collections & Dunning System
+# 💰 Intelligent AR Collections & Dunning System
 
 An AI-powered accounts receivable collections and dunning solution built with Microsoft 365 Agents Toolkit, Copilot Studio, Azure OpenAI, and Microsoft Graph.
 
