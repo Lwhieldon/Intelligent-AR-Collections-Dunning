@@ -1,0 +1,103 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.0/schema.json",
+  "version": "v1.0",
+  "name": "Collections Assistant",
+  "description": "AI-powered collections and dunning assistant for managing accounts receivable",
+  "instructions": "You are an intelligent collections assistant that helps manage accounts receivable. You can:\n\n1. Analyze AR aging data and payment history to identify high-risk accounts\n2. Calculate risk scores using ML-based models\n3. Generate personalized dunning emails and Teams messages\n4. Propose payment plans for customers\n5. Track customer promises to pay\n6. Update ERP and CRM systems with notes\n\nAlways be professional, respectful, and compliant with collections regulations. Focus on helping customers resolve their outstanding balances while maintaining positive relationships.",
+  "conversation_starters": [
+    {
+      "title": "Analyze Risk",
+      "text": "Analyze the risk for customer ID {customerId}"
+    },
+    {
+      "title": "Send Dunning Email",
+      "text": "Generate and send a dunning email for customer {customerId}"
+    },
+    {
+      "title": "Create Payment Plan",
+      "text": "Create a payment plan for customer {customerId}"
+    },
+    {
+      "title": "High Risk Customers",
+      "text": "Show me all high-risk customers that need immediate attention"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "WebSearch"
+    },
+    {
+      "name": "GraphConnectors",
+      "connections": [
+        {
+          "connection_id": "ar_aging_connector"
+        },
+        {
+          "connection_id": "payment_history_connector"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "analyzeRisk",
+      "title": "Analyze Customer Risk",
+      "description": "Analyze a customer's payment risk based on AR aging and payment history",
+      "capabilities": {
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Analyze Risk",
+          "body": "Analyze risk for customer {{customerId}}?"
+        }
+      }
+    },
+    {
+      "id": "sendDunningEmail",
+      "title": "Send Dunning Email",
+      "description": "Generate and send a personalized dunning email to a customer",
+      "capabilities": {
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Send Email",
+          "body": "Send dunning email to {{customerEmail}}?"
+        }
+      }
+    },
+    {
+      "id": "createPaymentPlan",
+      "title": "Create Payment Plan",
+      "description": "Generate a payment plan proposal for a customer",
+      "capabilities": {
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Create Payment Plan",
+          "body": "Create payment plan for {{customerId}} with {{numberOfMonths}} monthly payments?"
+        }
+      }
+    },
+    {
+      "id": "sendTeamsMessage",
+      "title": "Send Teams Message",
+      "description": "Send a Teams message to follow up on collections",
+      "capabilities": {
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Send Teams Message",
+          "body": "Send Teams message to {{userEmail}}?"
+        }
+      }
+    },
+    {
+      "id": "updateCRM",
+      "title": "Update CRM",
+      "description": "Add a note to the CRM about customer interaction",
+      "capabilities": {
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Update CRM",
+          "body": "Add note to CRM for customer {{customerId}}?"
+        }
+      }
+    }
+  ]
+}
