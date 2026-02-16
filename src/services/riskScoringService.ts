@@ -1,15 +1,37 @@
-import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
+import { AzureOpenAI } from 'openai';
+import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity';
+import '@azure/openai/types';
 import { RiskScore, ARAgingData, PaymentHistory, RiskFactor } from '../types';
 
 export class RiskScoringService {
-  private client: OpenAIClient;
+  private client: AzureOpenAI;
   private deploymentName: string;
 
   constructor() {
     const endpoint = process.env.AZURE_OPENAI_ENDPOINT || '';
     const apiKey = process.env.AZURE_OPENAI_API_KEY || '';
-    this.client = new OpenAIClient(endpoint, new AzureKeyCredential(apiKey));
+    const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
     this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4';
+    
+    // Use Microsoft Entra ID if API key is not provided, otherwise use API key
+    if (!apiKey) {
+      const credential = new DefaultAzureCredential();
+      const scope = 'https://cognitiveservices.azure.com/.default';
+      const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+      this.client = new AzureOpenAI({
+        endpoint,
+        azureADTokenProvider,
+        deployment: this.deploymentName,
+        apiVersion,
+      });
+    } else {
+      this.client = new AzureOpenAI({
+        endpoint,
+        apiKey,
+        deployment: this.deploymentName,
+        apiVersion,
+      });
+    }
   }
 
   /**
@@ -157,9 +179,9 @@ ${factors.map(f => `- ${f.factor}: ${f.description}`).join('\n')}
 Provide a concise recommendation (2-3 sentences) on the best collection approach.`;
 
     try {
-      const response = await this.client.getChatCompletions(
-        this.deploymentName,
-        [
+      const response = await this.client.chat.completions.create({
+        model: this.deploymentName,
+        messages: [
           {
             role: 'system',
             content: 'You are an expert collections specialist. Provide clear, actionable recommendations.',
@@ -169,11 +191,9 @@ Provide a concise recommendation (2-3 sentences) on the best collection approach
             content: prompt,
           },
         ],
-        {
-          maxTokens: 200,
-          temperature: 0.7,
-        }
-      );
+        max_tokens: 200,
+        temperature: 0.7,
+      });
 
       return response.choices[0]?.message?.content || 'Contact customer to discuss payment options.';
     } catch (error) {
