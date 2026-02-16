@@ -159,7 +159,7 @@
 - [x] `LICENSE` - MIT License
 - [x] `CODE_OF_CONDUCT.md` - Contributor Covenant v2.0
 - [x] `DISCLAIMER.md` - Security and legal notices
-- [x] `SETUP.md` - Installation and configuration
+- [x] `docs/SETUP.md` - Installation and configuration
 - [x] `COMPETITION_SUBMISSION.md` - Competition checklist
 - [x] `docs/ARCHITECTURE.md` - System architecture
 - [x] `docs/COPILOT_STUDIO_PLUGINS.md` - Plugin configuration

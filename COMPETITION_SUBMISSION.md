@@ -192,7 +192,7 @@ This solution addresses a critical enterprise need: managing accounts receivable
 |-----------|--------|--------|
 | Microsoft 365 Copilot Chat Agent | Required | ✅ Implemented |
 | External MCP Server Integration | 8 | ✅ Implemented |
-| OAuth Security for MCP Server | 5 | ✅ Fully Implemented |
+| OAuth Security for MCP Server | 5 | ✅ Implemented |
 | Adaptive Cards for UI/UX | 5 | ✅ Implemented |
 | Connected Agents Architecture | 15 | ✅ Implemented |
 | **TOTAL TECHNICAL POINTS** | **33** | **✅ 33 Points** |
@@ -228,7 +228,7 @@ By submitting this project:
 
 For questions about this submission:
 - Review the [documentation](README.md)
-- Check the [setup guide](SETUP.md)
+- Check the [setup guide](docs/SETUP.md)
 - See [implementation details](IMPLEMENTATION_SUMMARY.md)
 
 ---
