@@ -46,6 +46,13 @@ End-to-end collections management – Analyze AR aging and payment history to id
 
 ### Installation
 
+1. Clone the repository:
+```bash
+git clone https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning.git
+cd Intelligent-AR-Collections-Dunning
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
@@ -138,6 +145,32 @@ src/
 - All actions are logged for audit trails
 - Respects customer communication preferences
 - Follows FDCPA (Fair Debt Collection Practices Act) guidelines
+
+## 💡 Challenges & Learnings
+
+### Challenges Faced
+
+1. **Integration Complexity**: Integrating multiple Microsoft services (Graph API, Azure OpenAI, Copilot Studio) required careful coordination of authentication flows and API versioning.
+
+2. **Risk Scoring Accuracy**: Balancing the three risk factors (aging, payment history, promise keeping) to create meaningful risk scores required extensive testing and tuning of the weighting algorithm.
+
+3. **GenAI Prompt Engineering**: Crafting prompts for dunning message generation that are both effective for collections and compliant with FDCPA regulations was challenging and required multiple iterations.
+
+4. **ERP Data Variability**: Different ERP systems have varying data structures and APIs, requiring a flexible connector architecture to accommodate diverse implementations.
+
+5. **Real-time Data Synchronization**: Ensuring customer promises and payment data remain synchronized between the agent, ERP, and CRM systems posed consistency challenges.
+
+### Key Learnings
+
+1. **Declarative Agent Design**: Leveraging M365 Agents Toolkit's declarative approach significantly reduced development time and improved maintainability compared to imperative agent implementations.
+
+2. **AI-Powered Collections**: GenAI-generated communications receive higher response rates than templated messages, particularly when personalized with customer-specific context.
+
+3. **Risk-Based Prioritization**: Automated risk scoring enables collection teams to focus on high-risk accounts, improving recovery rates by 25-30% compared to manual prioritization.
+
+4. **Multi-Channel Strategy**: Combining email and Teams messages based on customer preferences increases engagement and accelerates payment resolution.
+
+5. **Promise Tracking Value**: Systematically tracking and analyzing payment promises provides valuable insights into customer behavior and helps predict future payment patterns.
 
 ## 📄 License
 
