@@ -66,10 +66,10 @@ AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5
 AZURE_OPENAI_API_VERSION=2025-08-07
 
-# Microsoft Graph Configuration
+# Microsoft Graph Configuration (Delegated Authentication)
 GRAPH_CLIENT_ID=your-client-id
-GRAPH_CLIENT_SECRET=your-client-secret
 GRAPH_TENANT_ID=your-tenant-id
+# Note: No client secret needed for delegated flow
 
 # ERP Configuration (Dynamics 365)
 ERP_API_ENDPOINT=https://your-org.api.crm.dynamics.com/api/data/v9.2
@@ -108,20 +108,22 @@ npm run test-openai
 
 This will verify your Azure OpenAI configuration and show the model information, including token usage for reasoning models.
 
-#### 2. Microsoft Graph Configuration
+#### 2. Microsoft Graph Configuration (Delegated Authentication)
+
+The system uses **delegated authentication** where you sign in as a user, and emails/Teams messages are sent from your account. This is more secure than application-only permissions.
 
 1. Go to the [Azure Portal](https://portal.azure.com)
 2. Navigate to **Azure Active Directory** → **App registrations** → **New registration**
 3. Register an app for Microsoft Graph access
 4. Copy the **Application (client) ID** and **Directory (tenant) ID**
-5. Go to **Certificates & secrets** → Create a new client secret
-6. Copy the secret value
-7. Go to **API permissions** → Add the following Microsoft Graph permissions:
-   - `Mail.Send` (for sending emails)
-   - `Chat.Create` (for Teams messaging)
-   - `User.Read.All` (for user lookups)
-8. Grant admin consent for your organization
-9. Update `.env` with these credentials
+5. Go to **Authentication** → **Advanced settings** → Enable **Allow public client flows** → **Yes** → **Save**
+6. Go to **API permissions** → Add the following Microsoft Graph **Delegated permissions**:
+   - `Mail.Send` - Send mail as the signed-in user
+   - `Chat.Create` - Create chats
+   - `User.Read` - Read signed-in user profile
+   - `User.ReadBasic.All` - Read basic profiles of all users
+7. **No admin consent required** - You'll consent on first sign-in
+8. Update `.env` with Client ID and Tenant ID (no secret needed)
 
 #### 3. Dynamics 365 ERP Configuration (OAuth2)
 
@@ -233,7 +235,9 @@ npx ts-node examples/collections-workflow.ts analysis
 
 ### Testing Email & Teams Functionality
 
-To test dunning emails and Teams messages:
+The system uses **delegated authentication** - you'll sign in once, and the app will send emails/Teams messages from your account.
+
+#### First-Time Sign-In Process
 
 1. Add your email to `.env`:
    ```bash
@@ -246,10 +250,35 @@ To test dunning emails and Teams messages:
    npx ts-node examples/collections-workflow.ts workflow
    ```
 
-3. The system will automatically send:
-   - **High-risk customers**: Urgent dunning email + Teams message
-   - **Medium-risk customers**: Payment plan proposal email
-   - **Low-risk customers**: Standard reminder email
+3. **Authentication prompt will appear**:
+   ```
+   === Microsoft Graph Authentication Required ===
+   To sign in, use a web browser to open the page
+   https://microsoft.com/devicelogin and enter the code ABC123DEF
+   to authenticate.
+   ==============================================
+   ```
+
+4. **Open browser** → Go to `https://microsoft.com/devicelogin`
+5. **Enter the code** shown in your terminal
+6. **Sign in** with your Microsoft 365 account (lwhieldon@schgroup.com)
+7. **Consent** to the requested permissions (Mail.Send, Chat.Create, User.Read, User.ReadBasic.All)
+8. Return to terminal - authentication complete!
+
+#### Subsequent Runs
+
+After first sign-in, your credentials are cached. You won't need to sign in again unless:
+- Token expires (typically 90 days)
+- You clear your credential cache
+
+#### What Gets Sent
+
+The system will automatically send:
+- **High-risk customers**: Urgent dunning email + Teams message
+- **Medium-risk customers**: Payment plan proposal email
+- **Low-risk customers**: Standard reminder email
+
+**All emails are sent from your mailbox** (the signed-in user)
 
 ### Programmatic API
 

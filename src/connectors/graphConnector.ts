@@ -1,5 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { ClientSecretCredential } from '@azure/identity';
+import { DeviceCodeCredential } from '@azure/identity';
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials';
 import { CRMNote } from '../types';
 
@@ -7,21 +7,32 @@ export class GraphConnector {
   private client: Client;
 
   constructor() {
-    const credential = new ClientSecretCredential(
-      process.env.GRAPH_TENANT_ID || '',
-      process.env.GRAPH_CLIENT_ID || '',
-      process.env.GRAPH_CLIENT_SECRET || ''
-    );
+    // Use delegated authentication (user sign-in) instead of application-only
+    const credential = new DeviceCodeCredential({
+      tenantId: process.env.GRAPH_TENANT_ID || '',
+      clientId: process.env.GRAPH_CLIENT_ID || '',
+      userPromptCallback: (info) => {
+        console.log('\n=== Microsoft Graph Authentication Required ===');
+        console.log(info.message);
+        console.log('==============================================\n');
+      },
+    });
 
     const authProvider = new TokenCredentialAuthenticationProvider(credential, {
-      scopes: ['https://graph.microsoft.com/.default'],
+      scopes: [
+        'https://graph.microsoft.com/Mail.Send',
+        'https://graph.microsoft.com/Chat.Create',
+        'https://graph.microsoft.com/User.Read',
+        'https://graph.microsoft.com/User.ReadBasic.All',
+      ],
     });
 
     this.client = Client.initWithMiddleware({ authProvider });
   }
 
   /**
-   * Send email via Microsoft Graph
+   * Send email via Microsoft Graph (Delegated authentication)
+   * Email will be sent from the signed-in user's mailbox
    */
   async sendEmail(to: string, subject: string, body: string, from?: string): Promise<void> {
     try {
@@ -40,22 +51,13 @@ export class GraphConnector {
         ],
       };
 
-      // For client credentials flow, we must specify a sender user
-      // Use provided 'from' email or fall back to GRAPH_SENDER_EMAIL env variable
-      const senderEmail = from || process.env.GRAPH_SENDER_EMAIL || process.env.TEST_COLLECTIONS_EMAIL;
-
-      if (!senderEmail || senderEmail === 'your-email@example.com') {
-        throw new Error('Sender email required for client credentials flow. Set GRAPH_SENDER_EMAIL or TEST_COLLECTIONS_EMAIL in .env');
-      }
-
-      const endpoint = `/users/${senderEmail}/sendMail`;
-
-      await this.client.api(endpoint).post({
+      // For delegated flow, use /me/sendMail - sends from signed-in user
+      await this.client.api('/me/sendMail').post({
         message,
         saveToSentItems: true,
       });
 
-      console.log(`Email sent to ${to}`);
+      console.log(`✓ Email sent to ${to} from signed-in user's mailbox`);
     } catch (error) {
       console.error('Error sending email:', error);
       throw new Error('Failed to send email via Graph API');

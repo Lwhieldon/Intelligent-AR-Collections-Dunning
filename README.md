@@ -46,10 +46,10 @@ End-to-end collections management – Analyze AR aging and payment history to id
 
 - Node.js 18 or higher
 - Azure OpenAI account with GPT-4 or GPT-5 deployment
-- Microsoft 365 tenant with appropriate permissions
-- ERP system with API access
+- Microsoft 365 account (you'll sign in to send emails/Teams messages)
+- ERP system with API access (Dynamics 365 recommended)
 
-> **Note**: If using GPT-5 (reasoning model), ensure `max_completion_tokens` is set to 2000+ to allow for reasoning tokens plus output
+> **Note**: This system uses **delegated authentication** - you sign in once with your Microsoft 365 account, and the app sends emails/Teams messages from your mailbox. No high-privilege application permissions required!
 
 ### Installation
 
