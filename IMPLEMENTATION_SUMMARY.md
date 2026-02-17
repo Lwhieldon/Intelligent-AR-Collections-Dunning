@@ -37,7 +37,8 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 
 ### 3. Risk Scoring Service
 **File**: `src/services/riskScoringService.ts`
-- **ML-based risk calculation** using Azure OpenAI GPT-4
+- **ML-based risk calculation** using Azure OpenAI (GPT-4/GPT-5)
+- GPT-5 reasoning model support for complex analysis
 - Three-factor scoring algorithm:
   - Aging Score (40% weight): Based on AR aging buckets
   - Payment History Score (35% weight): On-time rate + average days
@@ -47,7 +48,7 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 
 ### 4. Dunning Service
 **File**: `src/services/dunningService.ts`
-- **GenAI-powered content generation** using Azure OpenAI
+- **GenAI-powered content generation** using Azure OpenAI (GPT-4/GPT-5)
 - Generates personalized dunning emails with HTML formatting
 - Creates conversational Teams messages
 - Adapts tone and urgency based on risk level
@@ -104,7 +105,8 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 ## Key Features Implemented
 
 ### ✅ AI/ML Capabilities
-- ML-based risk scoring using Azure OpenAI
+- ML-based risk scoring using Azure OpenAI (GPT-4/GPT-5)
+- GPT-5 reasoning model support with extended thinking capabilities
 - GenAI-powered content generation for communications
 - Context-aware recommendations
 - Intelligent prioritization of collection efforts
@@ -177,7 +179,7 @@ Plugin configuration guide:
 ### Core Technologies
 - **Language**: TypeScript 5.x
 - **Runtime**: Node.js 18+
-- **AI/ML**: Azure OpenAI (GPT-4)
+- **AI/ML**: Azure OpenAI (GPT-4/GPT-5 with reasoning model support)
 - **Integration**: Microsoft Graph API
 - **Framework**: M365 Agents Toolkit
 
@@ -305,7 +307,7 @@ Successfully delivered a complete, production-ready Intelligent Collections & Du
 
 ✅ **Declarative Agent**: Configured for M365 Agents Toolkit & Copilot Studio
 
-✅ **Azure OpenAI Integration**: ML-based risk scoring and GenAI communications
+✅ **Azure OpenAI Integration**: ML-based risk scoring and GenAI communications (GPT-4/GPT-5 with reasoning model support)
 
 ✅ **Graph Connectors**: AR aging, payment history, email, Teams
 

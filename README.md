@@ -45,9 +45,11 @@ End-to-end collections management – Analyze AR aging and payment history to id
 ### Prerequisites
 
 - Node.js 18 or higher
-- Azure OpenAI account with GPT-4 deployment
+- Azure OpenAI account with GPT-4 or GPT-5 deployment
 - Microsoft 365 tenant with appropriate permissions
 - ERP system with API access
+
+> **Note**: If using GPT-5 (reasoning model), ensure `max_completion_tokens` is set to 2000+ to allow for reasoning tokens plus output
 
 ### Installation
 

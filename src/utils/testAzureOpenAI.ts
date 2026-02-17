@@ -32,14 +32,15 @@ async function testAzureOpenAI() {
     const response = await client.chat.completions.create({
       model: deploymentName,
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: 'Say "Hello, Azure OpenAI is working!"' },
+        { role: 'user', content: 'Respond with: "Azure OpenAI connection successful!"' },
       ],
-      max_completion_tokens: 50,
+      max_completion_tokens: 2000,
     });
 
     console.log('✅ SUCCESS! Azure OpenAI is working correctly!');
-    console.log(`Response: ${response.choices[0]?.message?.content}\n`);
+    console.log(`Response: ${response.choices[0]?.message?.content}`);
+    console.log(`Model: ${response.model}`);
+    console.log(`Tokens used: ${response.usage?.total_tokens} (${response.usage?.completion_tokens_details?.reasoning_tokens || 0} reasoning)\n`);
 
   } catch (error: any) {
     console.log('❌ Error with configured deployment');
@@ -78,16 +79,16 @@ async function testAzureOpenAI() {
               { role: 'system', content: 'You are a helpful assistant.' },
               { role: 'user', content: 'Say "Working!"' },
             ],
-            max_completion_tokens: 10,
+            max_completion_tokens: 100,
           });
 
           console.log(`  ✅ FOUND WORKING DEPLOYMENT: ${testName}`);
-          console.log(`  Response: ${testResponse.choices[0]?.message?.content}`);
+          console.log(`  Response: ${testResponse}`);
           console.log(`\n  Update your .env file with:`);
           console.log(`  AZURE_OPENAI_DEPLOYMENT_NAME=${testName}\n`);
           break;
         } catch (testError: any) {
-          console.log(`  ❌ ${testName} not available`);
+          console.log(`  ❌ ${testName} not available. This is the error: ${testError.message}.`);
         }
       }
     } else if (error.status === 401) {

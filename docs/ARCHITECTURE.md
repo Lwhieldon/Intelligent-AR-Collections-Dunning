@@ -23,7 +23,7 @@
              │                                  │
     ┌──────▼──────────┐                 ┌───────▼────────┐
     │  Azure OpenAI   │                 │ Microsoft Graph │
-    │   (GPT-4)       │                 │  Connectors     │
+    │ (GPT-4/GPT-5)   │                 │  Connectors     │
     │                 │                 │                 │
     │ • Risk Analysis │                 │ • Outlook Email │
     │ • GenAI Content │                 │ • Teams Chat    │
@@ -81,7 +81,8 @@ Graph Connector → Send Email with Plan
 
 ### Core Technologies
 - **TypeScript/Node.js**: Application runtime and language
-- **Azure OpenAI (GPT-4)**: ML-based risk scoring and GenAI content generation
+- **Azure OpenAI (GPT-4/GPT-5)**: ML-based risk scoring and GenAI content generation
+  - GPT-5 is a reasoning model that uses extended thinking for complex analysis
 - **Microsoft Graph API**: Communication and data integration
 - **M365 Agents Toolkit**: Declarative agent framework
 

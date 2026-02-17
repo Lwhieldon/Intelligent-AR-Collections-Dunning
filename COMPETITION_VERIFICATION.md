@@ -215,7 +215,8 @@ npm run lint
 - **Azure AD**: Authentication and authorization
 
 #### ✅ AI/ML Capabilities
-- **Risk Scoring**: ML-based risk calculation (Azure OpenAI GPT-4)
+- **Risk Scoring**: ML-based risk calculation (Azure OpenAI GPT-4/GPT-5)
+- **Reasoning Model Support**: GPT-5 for complex analysis with extended thinking
 - **Communication Generation**: GenAI-powered personalized emails
 - **Recommendations**: Context-aware collection strategies
 - **Prioritization**: Intelligent customer ranking

@@ -9,8 +9,8 @@ export class RiskScoringService {
   constructor() {
     const endpoint = process.env.AZURE_OPENAI_ENDPOINT || '';
     const apiKey = process.env.AZURE_OPENAI_API_KEY || '';
-    const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
-    this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4';
+    const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2025-01-01-preview';
+    this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-5';
     
     // Use Microsoft Entra ID if API key is not provided, otherwise use API key
     if (!apiKey) {

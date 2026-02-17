@@ -1,18 +1,54 @@
+/**
+ * Collections Workflow Examples
+ *
+ * This file demonstrates various collections workflows and use cases for the
+ * Intelligent AR Collections & Dunning system. It uses actual customer data
+ * from the ERP system (demo or production mode based on environment variables).
+ *
+ * Usage:
+ *   ts-node examples/collections-workflow.ts [workflow|batch|analysis]
+ *
+ * Examples:
+ *   ts-node examples/collections-workflow.ts workflow  - Complete workflow example
+ *   ts-node examples/collections-workflow.ts batch     - Batch processing & prioritization
+ *   ts-node examples/collections-workflow.ts analysis  - Detailed risk analysis
+ *
+ * Requirements:
+ *   - Run 'npm run create-invoices' first to create sample data in demo mode
+ *   - Configure .env file with appropriate credentials for production mode
+ */
+
+import * as dotenv from 'dotenv';
 import { CollectionsAgent } from '../src/agents/collectionsAgent';
-import { ARAgingData, PaymentHistory } from '../src/types';
+
+// Load environment variables
+dotenv.config();
 
 /**
  * Example: Complete collections workflow
  * This demonstrates a typical end-to-end collections process
  */
 async function completeCollectionsWorkflow() {
+  console.log('=== Complete Collections Workflow Example ===\n');
+
   const agent = new CollectionsAgent();
+
+  // Get actual customers from the system
+  console.log('Fetching customers with outstanding balances...');
+  const customerIds = await agent.getCustomersWithOutstandingBalance();
+
+  if (customerIds.length === 0) {
+    console.log('⚠️  No customers found. Run: npm run create-invoices to create sample data\n');
+    return;
+  }
+
+  const customerId = customerIds[0];
+  console.log(`Found ${customerIds.length} customers. Processing: ${customerId}\n`);
 
   // Step 1: Analyze risk for a customer
   console.log('Step 1: Analyzing customer risk...');
-  const customerId = 'CUST-12345';
   const riskScore = await agent.analyzeCustomerRisk(customerId);
-  
+
   console.log(`Customer: ${customerId}`);
   console.log(`Risk Score: ${(riskScore.score * 100).toFixed(1)}%`);
   console.log(`Risk Level: ${riskScore.riskLevel}`);
@@ -21,76 +57,152 @@ async function completeCollectionsWorkflow() {
 
   // Step 2: Based on risk level, take appropriate action
   if (riskScore.riskLevel === 'high') {
-    console.log('Step 2: High-risk customer detected. Sending urgent dunning email...');
-    await agent.sendDunningEmail(customerId, 'customer@example.com');
-    console.log('Dunning email sent.');
+    console.log('Step 2: High-risk customer detected.');
+    console.log('  Action: Would send urgent dunning email');
+    console.log('  (Email sending requires valid email addresses - see commented code below)');
+    // Uncomment to send actual email:
+    // await agent.sendDunningEmail(customerId, 'customer@example.com');
     console.log();
 
     // Step 3: Follow up with Teams message
-    console.log('Step 3: Sending Teams follow-up...');
-    await agent.sendTeamsFollowUp(customerId, 'collections@example.com');
-    console.log('Teams message sent.');
+    console.log('Step 3: Teams follow-up would be sent to collections team');
+    console.log('  (Teams messaging requires valid user email - see commented code below)');
+    // Uncomment to send actual Teams message:
+    // await agent.sendTeamsFollowUp(customerId, 'collections@example.com');
     console.log();
 
   } else if (riskScore.riskLevel === 'medium') {
-    console.log('Step 2: Medium-risk customer. Proposing payment plan...');
-    await agent.proposePaymentPlan(customerId, 'customer@example.com', 6);
-    console.log('Payment plan sent.');
+    console.log('Step 2: Medium-risk customer. Would propose payment plan.');
+    console.log('  (Payment plan requires valid email address - see commented code below)');
+    // Uncomment to send actual payment plan:
+    // await agent.proposePaymentPlan(customerId, 'customer@example.com', 6);
     console.log();
 
   } else {
-    console.log('Step 2: Low-risk customer. Sending standard reminder...');
-    await agent.sendDunningEmail(customerId, 'customer@example.com');
-    console.log('Reminder sent.');
+    console.log('Step 2: Low-risk customer. Would send standard reminder.');
+    console.log('  (Email sending requires valid email addresses - see commented code below)');
+    // Uncomment to send actual email:
+    // await agent.sendDunningEmail(customerId, 'customer@example.com');
     console.log();
   }
 
-  // Step 4: Record any customer promises
-  console.log('Step 4: Recording customer promise to pay...');
+  // Step 3: Record any customer promises
+  console.log('Step 3: Recording customer promise to pay...');
   await agent.recordPromiseToPay(
     customerId,
     5000,
     '2026-03-15',
     'Customer called and committed to payment after discussing financial situation'
   );
-  console.log('Promise recorded.');
+  console.log('Promise recorded.\n');
+
+  console.log('=== Workflow Complete ===\n');
 }
 
 /**
- * Example: Batch processing high-risk customers
+ * Example: Batch processing and prioritization
  */
 async function batchProcessHighRisk() {
+  console.log('=== Batch Processing & Prioritization Example ===\n');
+
   const agent = new CollectionsAgent();
 
-  console.log('Processing all high-risk customers...');
+  // Check if we have customers
+  const customerIds = await agent.getCustomersWithOutstandingBalance();
+
+  if (customerIds.length === 0) {
+    console.log('⚠️  No customers found. Run: npm run create-invoices to create sample data\n');
+    return;
+  }
+
+  console.log(`Found ${customerIds.length} customers to process\n`);
+
+  // Step 1: Process all high-risk customers
+  console.log('Step 1: Identifying high-risk customers...');
   await agent.processHighRiskCustomers();
-  console.log('Batch processing complete.');
+  console.log();
+
+  // Step 2: Prioritize collection efforts
+  console.log('Step 2: Prioritizing collection efforts...');
+  const prioritizedCustomers = await agent.prioritizeCollectionEfforts();
+
+  console.log(`\nTop 5 Priority Customers:`);
+  prioritizedCustomers.slice(0, 5).forEach((customer, index) => {
+    console.log(`  ${index + 1}. ${customer.customerName}`);
+    console.log(`     Customer ID: ${customer.customerId.substring(0, 12)}...`);
+    console.log(`     Risk Level: ${customer.riskScore.riskLevel} (${(customer.riskScore.score * 100).toFixed(1)}%)`);
+    console.log(`     Outstanding Balance: $${customer.totalOutstanding.toFixed(2)}`);
+    console.log(`     Priority Score: ${(customer.priority * 100).toFixed(1)}`);
+    console.log();
+  });
+
+  console.log('=== Batch Processing Complete ===\n');
 }
 
 /**
- * Example: Custom risk analysis with detailed output
+ * Example: Detailed risk analysis with promise tracking
  */
 async function detailedRiskAnalysis() {
+  console.log('=== Detailed Risk Analysis & Promise Tracking ===\n');
+
   const agent = new CollectionsAgent();
 
-  const customerId = 'CUST-67890';
+  // Get actual customer from the system
+  const customerIds = await agent.getCustomersWithOutstandingBalance();
+
+  if (customerIds.length === 0) {
+    console.log('⚠️  No customers found. Run: npm run create-invoices to create sample data\n');
+    return;
+  }
+
+  const customerId = customerIds[0];
+  console.log(`Analyzing customer: ${customerId}\n`);
+
+  // Analyze risk
+  console.log('Risk Analysis:');
   const riskScore = await agent.analyzeCustomerRisk(customerId);
 
-  console.log('=== Detailed Risk Analysis ===');
-  console.log(`Customer ID: ${customerId}`);
-  console.log(`Risk Score: ${(riskScore.score * 100).toFixed(2)}%`);
-  console.log(`Risk Level: ${riskScore.riskLevel.toUpperCase()}`);
+  console.log(`  Risk Score: ${(riskScore.score * 100).toFixed(2)}%`);
+  console.log(`  Risk Level: ${riskScore.riskLevel.toUpperCase()}`);
   console.log();
 
-  console.log('Risk Factors:');
+  console.log('  Risk Factors:');
   riskScore.factors.forEach((factor, index) => {
-    console.log(`  ${index + 1}. ${factor.factor} (Impact: ${(factor.impact * 100).toFixed(1)}%)`);
-    console.log(`     ${factor.description}`);
+    console.log(`    ${index + 1}. ${factor.factor} (Impact: ${(factor.impact * 100).toFixed(1)}%)`);
+    console.log(`       ${factor.description}`);
   });
   console.log();
 
-  console.log('Recommendation:');
-  console.log(`  ${riskScore.recommendation}`);
+  console.log('  Recommendation:');
+  console.log(`    ${riskScore.recommendation}`);
+  console.log();
+
+  // Analyze customer promise history
+  console.log('Promise to Pay History:');
+  const promiseSummary = await agent.summarizeCustomerPromises(customerId);
+
+  console.log(`  Total Promises: ${promiseSummary.totalPromises}`);
+  console.log(`  Fulfilled: ${promiseSummary.fulfilledPromises}`);
+  console.log(`  Broken: ${promiseSummary.brokenPromises}`);
+  console.log(`  Pending: ${promiseSummary.pendingPromises}`);
+  console.log(`  Fulfillment Rate: ${(promiseSummary.fulfillmentRate * 100).toFixed(1)}%`);
+  console.log(`  Total Promised Amount: $${promiseSummary.totalPromisedAmount.toFixed(2)}`);
+  console.log();
+
+  if (promiseSummary.recentPromises.length > 0) {
+    console.log('  Recent Promises:');
+    promiseSummary.recentPromises.forEach((promise, index) => {
+      const status = promise.fulfilled ? '✅ Fulfilled' :
+                     new Date(promise.promisedDate) < new Date() ? '❌ Broken' : '⏳ Pending';
+      console.log(`    ${index + 1}. ${promise.date} - $${promise.promisedAmount.toFixed(2)} by ${promise.promisedDate}`);
+      console.log(`       Status: ${status}`);
+    });
+  } else {
+    console.log('  No promises recorded yet.');
+  }
+  console.log();
+
+  console.log('=== Analysis Complete ===\n');
 }
 
 // Run examples

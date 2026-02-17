@@ -38,9 +38,11 @@ An AI-powered accounts receivable collections and dunning solution built with Mi
 ### Prerequisites
 
 - Node.js 18 or higher
-- Azure OpenAI account with GPT-4 deployment
+- Azure OpenAI account with GPT-4 or GPT-5 deployment
 - Microsoft 365 tenant with appropriate permissions
 - ERP system with API access
+
+> **Note**: If using GPT-5 (reasoning model), ensure `max_completion_tokens` is set to 2000+ in your API calls to allow for reasoning tokens plus output. See [testAzureOpenAI.ts](../src/utils/testAzureOpenAI.ts) for an example.
 
 ### Installation
 
@@ -90,8 +92,17 @@ RISK_THRESHOLD_MEDIUM=0.4
 2. Create an Azure OpenAI resource or use an existing one
 3. Navigate to **Keys and Endpoint**
 4. Copy the endpoint URL and one of the keys
-5. Create a GPT-5 deployment and note the deployment name
+5. Create a GPT-4 or GPT-5 deployment and note the deployment name
+   - **GPT-4**: Standard model, lower token requirements (50-500 tokens typically sufficient)
+   - **GPT-5**: Reasoning model, requires higher token limits (2000+ tokens recommended)
 6. Update `.env` with these values
+
+**Testing Your Connection:**
+```bash
+npm run test-openai
+```
+
+This will verify your Azure OpenAI configuration and show the model information, including token usage for reasoning models.
 
 #### 2. Microsoft Graph Configuration
 

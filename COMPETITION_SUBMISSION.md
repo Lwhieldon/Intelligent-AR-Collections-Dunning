@@ -94,7 +94,8 @@ This solution addresses a critical enterprise need: managing accounts receivable
 ### 🌟 Key Differentiators
 
 1. **AI/ML Integration**
-   - Azure OpenAI GPT-4 for risk scoring
+   - Azure OpenAI (GPT-4/GPT-5) for risk scoring
+   - GPT-5 reasoning model support for complex analysis
    - GenAI-powered personalized communications
    - Context-aware recommendations
 
@@ -120,7 +121,7 @@ This solution addresses a critical enterprise need: managing accounts receivable
 ### Technologies Used
 
 - **Platform**: Microsoft 365 Agents Toolkit
-- **AI/ML**: Azure OpenAI (GPT-4)
+- **AI/ML**: Azure OpenAI (GPT-4/GPT-5)
 - **Integration**: Microsoft Graph API, Dynamics 365
 - **Language**: TypeScript
 - **Runtime**: Node.js 18+
