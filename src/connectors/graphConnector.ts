@@ -81,14 +81,33 @@ export class GraphConnector {
 
   /**
    * Create a Teams chat with a user
+   * For one-on-one chats, both the signed-in user and recipient must be included
    */
   async createChat(userEmail: string): Promise<string> {
     try {
+      // Get the signed-in user (sender)
+      const me = await this.client.api('/me').get();
+
+      // Get the recipient user
       const user = await this.client.api(`/users/${userEmail}`).get();
 
+      // Check if trying to create chat with yourself
+      if (me.id === user.id) {
+        throw new Error(
+          `Cannot create Teams chat with yourself (${userEmail}). ` +
+          'Please set TEST_COLLECTIONS_EMAIL to a different user\'s email address in .env'
+        );
+      }
+
+      // OneOnOne chat requires exactly 2 different members
       const chat = await this.client.api('/chats').post({
         chatType: 'oneOnOne',
         members: [
+          {
+            '@odata.type': '#microsoft.graph.aadUserConversationMember',
+            roles: ['owner'],
+            'user@odata.bind': `https://graph.microsoft.com/v1.0/users('${me.id}')`,
+          },
           {
             '@odata.type': '#microsoft.graph.aadUserConversationMember',
             roles: ['owner'],
@@ -100,6 +119,12 @@ export class GraphConnector {
       return chat.id;
     } catch (error) {
       console.error('Error creating Teams chat:', error);
+
+      // Preserve the helpful error message about chatting with yourself
+      if (error instanceof Error && error.message.includes('Cannot create Teams chat with yourself')) {
+        throw error;
+      }
+
       throw new Error('Failed to create Teams chat via Graph API');
     }
   }

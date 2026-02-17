@@ -6,16 +6,18 @@
  * from the ERP system (demo or production mode based on environment variables).
  *
  * Usage:
- *   ts-node examples/collections-workflow.ts [workflow|batch|analysis]
+ *   ts-node examples/collections-workflow.ts [workflow|batch|analysis|teams]
  *
  * Examples:
  *   npx ts-node examples/collections-workflow.ts workflow  - Complete workflow example
  *   npx ts-node examples/collections-workflow.ts batch     - Batch processing & prioritization
  *   npx ts-node examples/collections-workflow.ts analysis  - Detailed risk analysis
+ *   npx ts-node examples/collections-workflow.ts teams     - Test Teams messaging
  *
  * Requirements:
  *   - Run 'npm run create-invoices' first to create sample data in demo mode
  *   - Configure .env file with appropriate credentials for production mode
+ *   - Set TEST_CUSTOMER_EMAIL and TEST_COLLECTIONS_EMAIL for email/Teams testing
  */
 
 import * as dotenv from 'dotenv';
@@ -191,6 +193,61 @@ async function batchProcessHighRisk() {
 }
 
 /**
+ * Example: Test Teams messaging functionality
+ */
+async function testTeamsMessaging() {
+  console.log('=== Teams Messaging Test ===\n');
+
+  const agent = new CollectionsAgent();
+
+  // Get actual customer from the system
+  const customerIds = await agent.getCustomersWithOutstandingBalance();
+
+  if (customerIds.length === 0) {
+    console.log('⚠️  No customers found. Run: npm run create-invoices to create sample data\n');
+    return;
+  }
+
+  const customerId = customerIds[0];
+  console.log(`Testing Teams messaging for customer: ${customerId}\n`);
+
+  // Get collections email for Teams testing
+  const collectionsEmail = process.env.TEST_COLLECTIONS_EMAIL || process.env.GRAPH_USER_EMAIL || 'your-email@example.com';
+
+  if (collectionsEmail === 'your-email@example.com') {
+    console.log('⚠️  Teams testing requires TEST_COLLECTIONS_EMAIL in .env');
+    console.log('   Set TEST_COLLECTIONS_EMAIL to your work email address\n');
+    return;
+  }
+
+  console.log('Step 1: Analyzing customer risk...');
+  const riskScore = await agent.analyzeCustomerRisk(customerId);
+  console.log(`   Risk Level: ${riskScore.riskLevel.toUpperCase()} (${(riskScore.score * 100).toFixed(1)}%)\n`);
+
+  console.log('Step 2: Creating Teams chat and sending message...');
+  console.log(`   Target: ${collectionsEmail}`);
+
+  try {
+    await agent.sendTeamsFollowUp(customerId, collectionsEmail);
+    console.log('   ✅ Teams chat created successfully');
+    console.log('   ✅ Teams message sent successfully');
+    console.log(`   📱 Check your Teams app for the message!\n`);
+  } catch (error: any) {
+    console.log(`   ❌ Teams message failed: ${error.message}\n`);
+
+    if (error.message.includes('authentication') || error.message.includes('401') || error.message.includes('403')) {
+      console.log('   💡 Authentication Issue Troubleshooting:');
+      console.log('      1. Ensure you completed interactive browser sign-in');
+      console.log('      2. Check Azure AD app has delegated permissions: Chat.Create, User.ReadBasic.All');
+      console.log('      3. Verify TEST_COLLECTIONS_EMAIL matches your signed-in account');
+      console.log('      4. Try clearing browser cache and re-authenticating\n');
+    }
+  }
+
+  console.log('=== Teams Test Complete ===\n');
+}
+
+/**
  * Example: Detailed risk analysis with promise tracking
  */
 async function detailedRiskAnalysis() {
@@ -270,9 +327,12 @@ if (require.main === module) {
     case 'analysis':
       detailedRiskAnalysis().catch(console.error);
       break;
+    case 'teams':
+      testTeamsMessaging().catch(console.error);
+      break;
     default:
-      console.log('Usage: ts-node examples/collections-workflow.ts [workflow|batch|analysis]');
+      console.log('Usage: ts-node examples/collections-workflow.ts [workflow|batch|analysis|teams]');
   }
 }
 
-export { completeCollectionsWorkflow, batchProcessHighRisk, detailedRiskAnalysis };
+export { completeCollectionsWorkflow, batchProcessHighRisk, detailedRiskAnalysis, testTeamsMessaging };
