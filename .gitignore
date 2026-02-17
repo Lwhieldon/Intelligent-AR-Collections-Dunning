@@ -28,3 +28,8 @@ credentials.json
 *.swo
 *~
 Thumbs.db
+
+# Compiled example files
+examples/**/*.js
+examples/**/*.d.ts
+examples/**/*.js.map
