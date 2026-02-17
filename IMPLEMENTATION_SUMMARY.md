@@ -74,8 +74,10 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 - **Outlook email integration**: Send dunning emails
 - **Teams messaging**: Create chats and send messages
 - **CRM integration**: Add notes to SharePoint lists
-- Uses Azure AD delegated authentication (user sign-in)
+- Uses Azure AD interactive browser authentication (local sign-in)
+- Properly passes device compliance for Conditional Access policies
 - Emails sent from signed-in user's mailbox
+- Works with managed/corporate devices
 - Lower security risk with delegated permissions
 
 ### 8. Type Definitions

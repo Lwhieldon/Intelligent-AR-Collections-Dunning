@@ -45,7 +45,8 @@
   - Comprehensive `.gitignore` includes secrets patterns
 
 - [x] **Microsoft Entra ID Integration**
-  - Graph Connector uses Azure AD delegated authentication (user sign-in)
+  - Graph Connector uses Azure AD interactive browser authentication
+  - Works with managed devices and Conditional Access policies
   - ERP Connector uses OAuth2 client credentials flow
   - Full OAuth2 implementation with `@azure/identity` library
   - Automatic token acquisition and refresh

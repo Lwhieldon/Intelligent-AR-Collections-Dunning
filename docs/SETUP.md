@@ -110,13 +110,19 @@ This will verify your Azure OpenAI configuration and show the model information,
 
 #### 2. Microsoft Graph Configuration (Delegated Authentication)
 
-The system uses **delegated authentication** where you sign in as a user, and emails/Teams messages are sent from your account. This is more secure than application-only permissions.
+The system uses **interactive browser authentication** where you sign in locally, and emails/Teams messages are sent from your account. This approach works with Conditional Access policies and device compliance requirements.
 
 1. Go to the [Azure Portal](https://portal.azure.com)
 2. Navigate to **Azure Active Directory** → **App registrations** → **New registration**
 3. Register an app for Microsoft Graph access
 4. Copy the **Application (client) ID** and **Directory (tenant) ID**
-5. Go to **Authentication** → **Advanced settings** → Enable **Allow public client flows** → **Yes** → **Save**
+5. Go to **Authentication**:
+   - Click **Add a platform** → Select **Web**
+   - Add Redirect URI: `http://localhost:3000`
+   - Check **ID tokens (used for implicit and hybrid flows)**
+   - Click **Configure**
+   - Under **Advanced settings** → Enable **Allow public client flows** → **Yes**
+   - Click **Save**
 6. Go to **API permissions** → Add the following Microsoft Graph **Delegated permissions**:
    - `Mail.Send` - Send mail as the signed-in user
    - `Chat.Create` - Create chats
@@ -235,7 +241,7 @@ npx ts-node examples/collections-workflow.ts analysis
 
 ### Testing Email & Teams Functionality
 
-The system uses **delegated authentication** - you'll sign in once, and the app will send emails/Teams messages from your account.
+The system uses **interactive browser authentication** - you'll sign in locally on your device, and the app will send emails/Teams messages from your account.
 
 #### First-Time Sign-In Process
 
@@ -250,26 +256,28 @@ The system uses **delegated authentication** - you'll sign in once, and the app 
    npx ts-node examples/collections-workflow.ts workflow
    ```
 
-3. **Authentication prompt will appear**:
-   ```
-   === Microsoft Graph Authentication Required ===
-   To sign in, use a web browser to open the page
-   https://microsoft.com/devicelogin and enter the code ABC123DEF
-   to authenticate.
-   ==============================================
-   ```
-
-4. **Open browser** → Go to `https://microsoft.com/devicelogin`
-5. **Enter the code** shown in your terminal
-6. **Sign in** with your Microsoft 365 account (lwhieldon@schgroup.com)
-7. **Consent** to the requested permissions (Mail.Send, Chat.Create, User.Read, User.ReadBasic.All)
-8. Return to terminal - authentication complete!
+3. **Browser will automatically open** on your device
+4. **Sign in** with your Microsoft 365 work account (e.g., your-email@domain.com)
+   - ⚠️ **Important**: Use your work account, not a personal Microsoft account
+5. **Consent** to the requested permissions (Mail.Send, Chat.Create, User.Read, User.ReadBasic.All)
+6. Browser redirects to `http://localhost:3000` - authentication complete!
+7. Return to terminal - the workflow continues automatically
 
 #### Subsequent Runs
 
 After first sign-in, your credentials are cached. You won't need to sign in again unless:
 - Token expires (typically 90 days)
 - You clear your credential cache
+
+#### Device Compliance & Conditional Access
+
+Interactive browser authentication properly passes your device identity to Azure AD, which means:
+- ✅ Works with managed/corporate devices
+- ✅ Satisfies Conditional Access device compliance policies
+- ✅ Works with Intune-enrolled devices
+- ✅ Passes device state to Azure AD
+
+If your organization requires device compliance, this authentication method will work correctly on managed devices.
 
 #### What Gets Sent
 

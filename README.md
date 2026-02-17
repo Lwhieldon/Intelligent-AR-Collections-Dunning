@@ -49,7 +49,7 @@ End-to-end collections management – Analyze AR aging and payment history to id
 - Microsoft 365 account (you'll sign in to send emails/Teams messages)
 - ERP system with API access (Dynamics 365 recommended)
 
-> **Note**: This system uses **delegated authentication** - you sign in once with your Microsoft 365 account, and the app sends emails/Teams messages from your mailbox. No high-privilege application permissions required!
+> **Note**: This system uses **interactive browser authentication** - a browser opens automatically on your device for sign-in, and the app sends emails/Teams messages from your mailbox. Works with managed devices and Conditional Access policies. No high-privilege application permissions required!
 
 ### Installation
 

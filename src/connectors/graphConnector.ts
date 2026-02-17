@@ -1,5 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { DeviceCodeCredential } from '@azure/identity';
+import { InteractiveBrowserCredential } from '@azure/identity';
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials';
 import { CRMNote } from '../types';
 
@@ -7,15 +7,12 @@ export class GraphConnector {
   private client: Client;
 
   constructor() {
-    // Use delegated authentication (user sign-in) instead of application-only
-    const credential = new DeviceCodeCredential({
+    // Use interactive browser authentication (passes device compliance)
+    // Note: Redirect URI must be configured in Azure AD as "Mobile and desktop applications"
+    const credential = new InteractiveBrowserCredential({
       tenantId: process.env.GRAPH_TENANT_ID || '',
       clientId: process.env.GRAPH_CLIENT_ID || '',
-      userPromptCallback: (info) => {
-        console.log('\n=== Microsoft Graph Authentication Required ===');
-        console.log(info.message);
-        console.log('==============================================\n');
-      },
+      redirectUri: 'http://localhost:3000',
     });
 
     const authProvider = new TokenCredentialAuthenticationProvider(credential, {
