@@ -90,10 +90,12 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 
 ### 9. Example Workflows
 **File**: `examples/collections-workflow.ts`
-- Three complete workflow examples:
-  - Complete collections workflow (risk → action → follow-up)
-  - Batch processing of high-risk customers
-  - Detailed risk analysis with full output
+- Three complete workflow examples with production features:
+  - **Complete workflow**: Random customer selection, detailed risk breakdown, optional email sending
+  - **Batch processing**: Prioritizes and processes all high-risk customers
+  - **Detailed analysis**: Shows full risk factors and payment promise history
+- **Email testing enabled**: Set `TEST_CUSTOMER_EMAIL` in `.env` to send actual emails
+- **Smart automation**: Automatically sends emails/Teams messages based on risk level
 
 ### 10. Discover Entities
 **File**: `utils/discoverEntities.ts`

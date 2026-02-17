@@ -42,8 +42,10 @@ async function completeCollectionsWorkflow() {
     return;
   }
 
-  const customerId = customerIds[0];
-  console.log(`Found ${customerIds.length} customers. Processing: ${customerId}\n`);
+  // Pick a random customer for varied results
+  const randomIndex = Math.floor(Math.random() * customerIds.length);
+  const customerId = customerIds[randomIndex];
+  console.log(`Found ${customerIds.length} customers. Randomly selected: ${customerId} (Customer ${randomIndex + 1} of ${customerIds.length})\n`);
 
   // Step 1: Analyze risk for a customer
   console.log('Step 1: Analyzing customer risk...');
@@ -66,31 +68,72 @@ async function completeCollectionsWorkflow() {
   // Step 2: Based on risk level, take appropriate action
   if (riskScore.riskLevel === 'high') {
     console.log('Step 2: High-risk customer detected.');
-    console.log('  Action: Would send urgent dunning email');
-    console.log('  (Email sending requires valid email addresses - see commented code below)');
-    // Uncomment to send actual email:
-    // await agent.sendDunningEmail(customerId, 'customer@example.com');
+
+    // Get email addresses from environment or use defaults
+    const customerEmail = process.env.TEST_CUSTOMER_EMAIL || 'customer@example.com';
+    const collectionsEmail = process.env.TEST_COLLECTIONS_EMAIL || process.env.GRAPH_USER_EMAIL || 'your-email@example.com';
+
+    if (customerEmail !== 'customer@example.com') {
+      console.log('  Action: Sending urgent dunning email...');
+      try {
+        await agent.sendDunningEmail(customerId, customerEmail);
+        console.log(`  ✅ Dunning email sent to ${customerEmail}`);
+      } catch (error: any) {
+        console.log(`  ⚠️  Email failed: ${error.message}`);
+      }
+    } else {
+      console.log('  Action: Would send urgent dunning email');
+      console.log('  💡 Set TEST_CUSTOMER_EMAIL in .env to enable email sending');
+    }
     console.log();
 
     // Step 3: Follow up with Teams message
-    console.log('Step 3: Teams follow-up would be sent to collections team');
-    console.log('  (Teams messaging requires valid user email - see commented code below)');
-    // Uncomment to send actual Teams message:
-    // await agent.sendTeamsFollowUp(customerId, 'collections@example.com');
+    if (collectionsEmail !== 'your-email@example.com') {
+      console.log('Step 3: Sending Teams follow-up to collections team...');
+      try {
+        await agent.sendTeamsFollowUp(customerId, collectionsEmail);
+        console.log(`  ✅ Teams message sent to ${collectionsEmail}`);
+      } catch (error: any) {
+        console.log(`  ⚠️  Teams message failed: ${error.message}`);
+      }
+    } else {
+      console.log('Step 3: Teams follow-up would be sent to collections team');
+      console.log('  💡 Set TEST_COLLECTIONS_EMAIL in .env to enable Teams messaging');
+    }
     console.log();
 
   } else if (riskScore.riskLevel === 'medium') {
-    console.log('Step 2: Medium-risk customer. Would propose payment plan.');
-    console.log('  (Payment plan requires valid email address - see commented code below)');
-    // Uncomment to send actual payment plan:
-    // await agent.proposePaymentPlan(customerId, 'customer@example.com', 6);
+    const customerEmail = process.env.TEST_CUSTOMER_EMAIL || 'customer@example.com';
+
+    if (customerEmail !== 'customer@example.com') {
+      console.log('Step 2: Medium-risk customer. Proposing payment plan...');
+      try {
+        await agent.proposePaymentPlan(customerId, customerEmail, 6);
+        console.log(`  ✅ Payment plan sent to ${customerEmail}`);
+      } catch (error: any) {
+        console.log(`  ⚠️  Payment plan failed: ${error.message}`);
+      }
+    } else {
+      console.log('Step 2: Medium-risk customer. Would propose payment plan.');
+      console.log('  💡 Set TEST_CUSTOMER_EMAIL in .env to enable payment plan emails');
+    }
     console.log();
 
   } else {
-    console.log('Step 2: Low-risk customer. Would send standard reminder.');
-    console.log('  (Email sending requires valid email addresses - see commented code below)');
-    // Uncomment to send actual email:
-    // await agent.sendDunningEmail(customerId, 'customer@example.com');
+    const customerEmail = process.env.TEST_CUSTOMER_EMAIL || 'customer@example.com';
+
+    if (customerEmail !== 'customer@example.com') {
+      console.log('Step 2: Low-risk customer. Sending standard reminder...');
+      try {
+        await agent.sendDunningEmail(customerId, customerEmail);
+        console.log(`  ✅ Reminder email sent to ${customerEmail}`);
+      } catch (error: any) {
+        console.log(`  ⚠️  Email failed: ${error.message}`);
+      }
+    } else {
+      console.log('Step 2: Low-risk customer. Would send standard reminder.');
+      console.log('  💡 Set TEST_CUSTOMER_EMAIL in .env to enable email sending');
+    }
     console.log();
   }
 

@@ -80,8 +80,12 @@ ERP_RESOURCE=https://your-org.api.crm.dynamics.com/
 
 # Application Settings
 PORT=3000
-RISK_THRESHOLD_HIGH=0.7
-RISK_THRESHOLD_MEDIUM=0.4
+RISK_THRESHOLD_HIGH=0.5
+RISK_THRESHOLD_MEDIUM=0.3
+
+# Testing Email & Teams Functionality (Optional)
+TEST_CUSTOMER_EMAIL=your-email@domain.com
+TEST_COLLECTIONS_EMAIL=your-email@domain.com
 ```
 
 ### Detailed Configuration Steps
@@ -206,6 +210,46 @@ npm start
 ```
 
 ## Usage
+
+### Interactive Examples
+
+Run the example workflows to see the system in action:
+
+```bash
+# Complete workflow with random customer selection
+npx ts-node examples/collections-workflow.ts workflow
+
+# Batch processing and prioritization
+npx ts-node examples/collections-workflow.ts batch
+
+# Detailed risk analysis with payment history
+npx ts-node examples/collections-workflow.ts analysis
+```
+
+**Features:**
+- 🎲 **Random customer selection** - Each run picks a different customer for varied results
+- 📊 **Detailed risk breakdown** - Shows all three risk factors (Aging 50%, Payment 30%, Promises 20%)
+- 📧 **Email testing** - Set `TEST_CUSTOMER_EMAIL` and `TEST_COLLECTIONS_EMAIL` in `.env` to send actual emails
+
+### Testing Email & Teams Functionality
+
+To test dunning emails and Teams messages:
+
+1. Add your email to `.env`:
+   ```bash
+   TEST_CUSTOMER_EMAIL=your-email@domain.com
+   TEST_COLLECTIONS_EMAIL=your-email@domain.com
+   ```
+
+2. Run the workflow:
+   ```bash
+   npx ts-node examples/collections-workflow.ts workflow
+   ```
+
+3. The system will automatically send:
+   - **High-risk customers**: Urgent dunning email + Teams message
+   - **Medium-risk customers**: Payment plan proposal email
+   - **Low-risk customers**: Standard reminder email
 
 ### Programmatic API
 

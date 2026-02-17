@@ -99,16 +99,40 @@ Risk levels:
 - **Medium Risk**: Score ≥ 0.3 (30%)
 - **Low Risk**: Score < 0.3 (30%)
 
-## 💻 Usage Example
+## 💻 Usage Examples
+
+### Run Interactive Examples
+
+```bash
+# Complete workflow with random customer selection
+npx ts-node examples/collections-workflow.ts workflow
+
+# Batch processing and prioritization
+npx ts-node examples/collections-workflow.ts batch
+
+# Detailed risk analysis with payment history
+npx ts-node examples/collections-workflow.ts analysis
+```
+
+### Enable Email Testing
+
+Add to your `.env` file:
+```bash
+TEST_CUSTOMER_EMAIL=your-email@domain.com
+TEST_COLLECTIONS_EMAIL=your-email@domain.com
+```
+
+### Programmatic API
 
 ```typescript
 import { CollectionsAgent } from './agents/collectionsAgent';
 
 const agent = new CollectionsAgent();
 
-// Analyze customer risk
+// Analyze customer risk (shows detailed factor breakdown)
 const riskScore = await agent.analyzeCustomerRisk('CUST-001');
 console.log(`Risk Level: ${riskScore.riskLevel}`);
+console.log(`Factors: ${riskScore.factors.length} components analyzed`);
 
 // Prioritize collection efforts across all customers
 const prioritizedCustomers = await agent.prioritizeCollectionEfforts();

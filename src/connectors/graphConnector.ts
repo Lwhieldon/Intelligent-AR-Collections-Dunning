@@ -40,7 +40,15 @@ export class GraphConnector {
         ],
       };
 
-      const endpoint = from ? `/users/${from}/sendMail` : '/me/sendMail';
+      // For client credentials flow, we must specify a sender user
+      // Use provided 'from' email or fall back to GRAPH_SENDER_EMAIL env variable
+      const senderEmail = from || process.env.GRAPH_SENDER_EMAIL || process.env.TEST_COLLECTIONS_EMAIL;
+
+      if (!senderEmail || senderEmail === 'your-email@example.com') {
+        throw new Error('Sender email required for client credentials flow. Set GRAPH_SENDER_EMAIL or TEST_COLLECTIONS_EMAIL in .env');
+      }
+
+      const endpoint = `/users/${senderEmail}/sendMail`;
 
       await this.client.api(endpoint).post({
         message,
