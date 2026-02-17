@@ -19,6 +19,7 @@ export class GraphConnector {
       scopes: [
         'https://graph.microsoft.com/Mail.Send',
         'https://graph.microsoft.com/Chat.Create',
+        'https://graph.microsoft.com/ChatMessage.Send',
         'https://graph.microsoft.com/User.Read',
         'https://graph.microsoft.com/User.ReadBasic.All',
       ],
