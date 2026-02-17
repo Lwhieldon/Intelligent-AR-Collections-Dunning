@@ -45,8 +45,8 @@ export class RiskScoringService {
     const paymentScore = this.calculatePaymentHistoryScore(paymentHistory);
     const promiseKeepingScore = this.calculatePromiseKeepingScore(paymentHistory);
 
-    // Weighted average
-    const rawScore = (agingScore * 0.4) + (paymentScore * 0.35) + (promiseKeepingScore * 0.25);
+    // Weighted average (aging increased to 50% to prioritize overdue balances)
+    const rawScore = (agingScore * 0.5) + (paymentScore * 0.3) + (promiseKeepingScore * 0.2);
 
     // Normalize to 0-1 range
     const normalizedScore = Math.min(Math.max(rawScore, 0), 1);
@@ -121,29 +121,31 @@ export class RiskScoringService {
   ): RiskFactor[] {
     const factors: RiskFactor[] = [];
 
-    if (agingScore > 0.5) {
-      factors.push({
-        factor: 'Aged Receivables',
-        impact: agingScore,
-        description: `${((arData.days90 + arData.days120Plus) / arData.totalOutstanding * 100).toFixed(1)}% of outstanding balance is over 90 days`,
-      });
-    }
+    // Always show aging factor
+    const agedPercent = ((arData.days90 + arData.days120Plus) / arData.totalOutstanding * 100);
+    factors.push({
+      factor: 'Aged Receivables (50% weight)',
+      impact: agingScore,
+      description: `${agedPercent.toFixed(1)}% of outstanding balance is over 90 days old`,
+    });
 
-    if (paymentScore > 0.5) {
-      factors.push({
-        factor: 'Payment History',
-        impact: paymentScore,
-        description: `Average payment delay: ${paymentHistory.averagePaymentDays.toFixed(0)} days, On-time rate: ${(paymentHistory.onTimePaymentRate * 100).toFixed(1)}%`,
-      });
-    }
+    // Always show payment history factor
+    factors.push({
+      factor: 'Payment History (30% weight)',
+      impact: paymentScore,
+      description: `Average payment delay: ${paymentHistory.averagePaymentDays.toFixed(0)} days, On-time rate: ${(paymentHistory.onTimePaymentRate * 100).toFixed(1)}%`,
+    });
 
-    if (promiseScore > 0.3) {
-      factors.push({
-        factor: 'Promise Keeping',
-        impact: promiseScore,
-        description: `${(promiseScore * 100).toFixed(0)}% of payment promises were broken`,
-      });
-    }
+    // Always show promise keeping factor
+    const totalPromises = paymentHistory.promiseToPayHistory.length;
+    const brokenPromises = paymentHistory.promiseToPayHistory.filter(p => !p.fulfilled).length;
+    factors.push({
+      factor: 'Promise Keeping (20% weight)',
+      impact: promiseScore,
+      description: totalPromises > 0
+        ? `${brokenPromises} of ${totalPromises} promises broken (${(promiseScore * 100).toFixed(0)}% broken rate)`
+        : 'No payment promises on record',
+    });
 
     return factors;
   }

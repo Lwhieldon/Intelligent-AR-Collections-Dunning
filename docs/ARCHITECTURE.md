@@ -177,28 +177,28 @@ Graph Connector → Send Email with Plan
 
 ### Scoring Components
 
-1. **Aging Score (40% weight)**
+1. **Aging Score (50% weight)** - Prioritizes overdue balances
    - Current: 0% risk
    - 30 days: 25% risk
    - 60 days: 50% risk
    - 90 days: 75% risk
    - 120+ days: 100% risk
 
-2. **Payment History Score (35% weight)**
+2. **Payment History Score (30% weight)**
    - On-time payment rate (60% of score)
    - Average payment days (40% of score)
 
-3. **Promise Keeping Score (25% weight)**
+3. **Promise Keeping Score (20% weight)**
    - Ratio of broken to total promises
 
 ### Final Score Calculation
 ```
-Risk Score = (Aging × 0.4) + (Payment × 0.35) + (Promise × 0.25)
+Risk Score = (Aging × 0.5) + (Payment × 0.3) + (Promise × 0.2)
 
 Risk Level:
-  - High:   Score ≥ 0.7 (70%)
-  - Medium: Score ≥ 0.4 (40%)
-  - Low:    Score < 0.4 (40%)
+  - High:   Score ≥ 0.5 (50%)
+  - Medium: Score ≥ 0.3 (30%)
+  - Low:    Score < 0.3 (30%)
 ```
 
 ### AI Enhancement

@@ -90,14 +90,14 @@ npm start
 
 The risk scoring algorithm considers three main factors:
 
-1. **Aging Score (40%)**: Based on the distribution of outstanding balances across aging buckets
-2. **Payment History Score (35%)**: Based on average payment days and on-time payment rate
-3. **Promise Keeping Score (25%)**: Based on the ratio of fulfilled to broken payment promises
+1. **Aging Score (50%)**: Based on the distribution of outstanding balances across aging buckets (prioritizes overdue balances)
+2. **Payment History Score (30%)**: Based on average payment days and on-time payment rate
+3. **Promise Keeping Score (20%)**: Based on the ratio of fulfilled to broken payment promises
 
 Risk levels:
-- **High Risk**: Score ≥ 0.7
-- **Medium Risk**: Score ≥ 0.4
-- **Low Risk**: Score < 0.4
+- **High Risk**: Score ≥ 0.5 (50%)
+- **Medium Risk**: Score ≥ 0.3 (30%)
+- **Low Risk**: Score < 0.3 (30%)
 
 ## 💻 Usage Example
 

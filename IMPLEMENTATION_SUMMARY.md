@@ -40,11 +40,11 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 - **ML-based risk calculation** using Azure OpenAI (GPT-4/GPT-5)
 - GPT-5 reasoning model support for complex analysis
 - Three-factor scoring algorithm:
-  - Aging Score (40% weight): Based on AR aging buckets
-  - Payment History Score (35% weight): On-time rate + average days
-  - Promise Keeping Score (25% weight): Fulfilled vs broken promises
+  - Aging Score (50% weight): Based on AR aging buckets (prioritizes overdue balances)
+  - Payment History Score (30% weight): On-time rate + average days
+  - Promise Keeping Score (20% weight): Fulfilled vs broken promises
 - AI-powered recommendation generation
-- Risk level classification: High (≥70%), Medium (≥40%), Low (<40%)
+- Risk level classification: High (≥50%), Medium (≥30%), Low (<30%)
 
 ### 4. Dunning Service
 **File**: `src/services/dunningService.ts`

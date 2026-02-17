@@ -45,9 +45,9 @@ async function createSampleInvoices() {
     console.log('Step 3: Creating sample invoices...\n');
 
     const invoiceAmounts = [
-      { current: 50000, days30: 30000, days60: 25000, days90: 15000 },
-      { current: 60000, days30: 15000, days60: 10000, days90: 0 },
-      { current: 80000, days30: 50000, days60: 40000, days90: 20000 },
+      { current: 50000, days30: 30000, days60: 25000, days90: 15000, days120: 45000 },
+      { current: 60000, days30: 15000, days60: 10000, days90: 8000, days120: 32000 },
+      { current: 80000, days30: 50000, days60: 40000, days90: 20000, days120: 75000 },
     ];
 
     for (let i = 0; i < Math.min(accounts.length, 3); i++) {
@@ -108,6 +108,23 @@ async function createSampleInvoices() {
         );
       }
 
+      // Create 120+ day overdue invoice (HIGH RISK)
+      if (amounts.days120 > 0) {
+        await createInvoice(
+          tokenResponse.token,
+          apiEndpoint,
+          account.accountid,
+          account.name,
+          '120+ Days',
+          amounts.days120,
+          135
+        );
+      }
+
+      // Create sample payment history
+      console.log('Creating payment history...');
+      await createPaymentHistory(tokenResponse.token, apiEndpoint, account.accountid, i);
+
       console.log('');
     }
 
@@ -141,17 +158,17 @@ async function createInvoice(
   };
 
   try {
+    // Step 1: Create the invoice header
     const invoiceData = {
       name: `INV-${ageBucket}-${Date.now()}`,
       'customerid_account@odata.bind': `/accounts(${accountId})`,
       billto_name: accountName,
-      totalamount: amount,
       datedelivered: formatDate(invoiceDate),
       duedate: formatDate(dueDate),
-      description: `Sample invoice for ${ageBucket} aging bucket`,
+      description: `Sample invoice for ${ageBucket} aging bucket (Outstanding - Unpaid)`,
     };
 
-    await axios.post(
+    const invoiceResponse = await axios.post(
       `${apiEndpoint}/invoices`,
       invoiceData,
       {
@@ -160,13 +177,138 @@ async function createInvoice(
           'Content-Type': 'application/json',
           'OData-MaxVersion': '4.0',
           'OData-Version': '4.0',
+          'Prefer': 'return=representation',
         },
       }
     );
 
-    console.log(`  ✅ Created ${ageBucket} invoice: $${amount.toLocaleString()} (${daysOld} days old)`);
+    const createdInvoice = invoiceResponse.data;
+    const invoiceId = createdInvoice.invoiceid;
+
+    // Step 2: Create invoice line item (product)
+    try {
+      const lineItemData = {
+        'invoiceid@odata.bind': `/invoices(${invoiceId})`,
+        productdescription: `${ageBucket} aging sample charge`,
+        quantity: 1,
+        priceperunit: amount,
+        baseamount: amount,
+        extendedamount: amount,
+        manualdiscountamount: 0,
+        tax: 0,
+        ispriceoverridden: true, // Allow manual pricing without product catalog
+      };
+
+      await axios.post(
+        `${apiEndpoint}/invoicedetails`,
+        lineItemData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'OData-MaxVersion': '4.0',
+            'OData-Version': '4.0',
+          },
+        }
+      );
+
+      console.log(`  ✅ Created ${ageBucket} invoice with line item: $${amount.toLocaleString()} (${daysOld} days old)`);
+    } catch (lineItemError: any) {
+      console.log(`  ⚠️  Invoice created but line item failed: ${lineItemError.response?.data?.error?.message || lineItemError.message}`);
+      console.log(`     Full error:`, JSON.stringify(lineItemError.response?.data, null, 2));
+    }
   } catch (error: any) {
     console.log(`  ⚠️  Could not create ${ageBucket} invoice: ${error.response?.data?.error?.message || error.message}`);
+    console.log(`     Full error:`, JSON.stringify(error.response?.data, null, 2));
+  }
+}
+
+/**
+ * Create sample payment history for realistic risk scoring
+ */
+async function createPaymentHistory(
+  token: string,
+  apiEndpoint: string,
+  accountId: string,
+  customerIndex: number
+) {
+  // Define payment patterns for each customer (varied for testing)
+  const paymentPatterns = [
+    { onTimeRate: 0.7, avgDaysLate: 15, promisesFulfilled: 0.6 }, // Customer 0: Decent payer
+    { onTimeRate: 0.5, avgDaysLate: 30, promisesFulfilled: 0.4 }, // Customer 1: Moderate risk
+    { onTimeRate: 0.3, avgDaysLate: 45, promisesFulfilled: 0.2 }, // Customer 2: High risk payer
+  ];
+
+  const pattern = paymentPatterns[customerIndex] || paymentPatterns[0];
+
+  try {
+    // Create 10 historical payment records
+    for (let i = 0; i < 10; i++) {
+      const isOnTime = Math.random() < pattern.onTimeRate;
+      const daysLate = isOnTime ? 0 : Math.floor(Math.random() * pattern.avgDaysLate);
+      const paymentDate = new Date();
+      paymentDate.setDate(paymentDate.getDate() - (90 - i * 9) - daysLate);
+
+      const paymentAmount = 5000 + Math.floor(Math.random() * 10000);
+
+      const paymentData = {
+        'regardingobjectid_account@odata.bind': `/accounts(${accountId})`,
+        subject: `Payment ${i + 1} - ${isOnTime ? 'On Time' : daysLate + ' days late'}`,
+        actualend: paymentDate.toISOString(),
+        description: `Historical payment record. Amount: $${paymentAmount}. Days late: ${daysLate}`,
+        statecode: 1, // Completed
+        statuscode: 2, // Completed
+      };
+
+      await axios.post(
+        `${apiEndpoint}/tasks`,
+        paymentData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'OData-MaxVersion': '4.0',
+            'OData-Version': '4.0',
+          },
+        }
+      );
+    }
+
+    // Create 3-5 promise to pay records
+    const promiseCount = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < promiseCount; i++) {
+      const fulfilled = Math.random() < pattern.promisesFulfilled;
+      const promiseDate = new Date();
+      promiseDate.setDate(promiseDate.getDate() - (60 - i * 15));
+
+      const promiseAmount = 3000 + Math.floor(Math.random() * 7000);
+
+      const promiseData = {
+        'regardingobjectid_account@odata.bind': `/accounts(${accountId})`,
+        subject: `Promise to Pay - ${fulfilled ? 'Fulfilled' : 'Broken'}`,
+        scheduledend: promiseDate.toISOString(),
+        description: `Promised $${promiseAmount} by ${promiseDate.toISOString().split('T')[0]}. Status: ${fulfilled ? 'Paid' : 'Not paid'}`,
+        statecode: 1, // Completed
+        statuscode: fulfilled ? 5 : 6, // 5=Completed, 6=Canceled
+      };
+
+      await axios.post(
+        `${apiEndpoint}/appointments`,
+        promiseData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'OData-MaxVersion': '4.0',
+            'OData-Version': '4.0',
+          },
+        }
+      );
+    }
+
+    console.log(`  ✅ Created payment history (${pattern.onTimeRate * 100}% on-time rate)`);
+  } catch (error: any) {
+    console.log(`  ⚠️  Could not create payment history: ${error.response?.data?.error?.message || error.message}`);
   }
 }
 

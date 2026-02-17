@@ -9,9 +9,9 @@
  *   ts-node examples/collections-workflow.ts [workflow|batch|analysis]
  *
  * Examples:
- *   ts-node examples/collections-workflow.ts workflow  - Complete workflow example
- *   ts-node examples/collections-workflow.ts batch     - Batch processing & prioritization
- *   ts-node examples/collections-workflow.ts analysis  - Detailed risk analysis
+ *   npx ts-node examples/collections-workflow.ts workflow  - Complete workflow example
+ *   npx ts-node examples/collections-workflow.ts batch     - Batch processing & prioritization
+ *   npx ts-node examples/collections-workflow.ts analysis  - Detailed risk analysis
  *
  * Requirements:
  *   - Run 'npm run create-invoices' first to create sample data in demo mode
@@ -49,10 +49,18 @@ async function completeCollectionsWorkflow() {
   console.log('Step 1: Analyzing customer risk...');
   const riskScore = await agent.analyzeCustomerRisk(customerId);
 
-  console.log(`Customer: ${customerId}`);
-  console.log(`Risk Score: ${(riskScore.score * 100).toFixed(1)}%`);
-  console.log(`Risk Level: ${riskScore.riskLevel}`);
-  console.log(`Recommendation: ${riskScore.recommendation}`);
+  console.log(`\n📊 Risk Analysis Results:`);
+  console.log(`   Customer: ${customerId}`);
+  console.log(`   Overall Risk Score: ${(riskScore.score * 100).toFixed(1)}%`);
+  console.log(`   Risk Level: ${riskScore.riskLevel.toUpperCase()}`);
+
+  console.log(`\n   Risk Factor Breakdown:`);
+  riskScore.factors.forEach((factor, index) => {
+    console.log(`   ${index + 1}. ${factor.factor} (Impact: ${(factor.impact * 100).toFixed(1)}%)`);
+    console.log(`      ${factor.description}`);
+  });
+
+  console.log(`\n   Recommendation: ${riskScore.recommendation}`);
   console.log();
 
   // Step 2: Based on risk level, take appropriate action
