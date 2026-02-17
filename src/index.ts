@@ -19,9 +19,19 @@ async function main() {
   // - API calls from other systems
 
   try {
-    // Example 1: Analyze risk for a specific customer
+    // Get customers with outstanding balances (works in both demo and production mode)
+    console.log('Getting customers with outstanding balances...');
+    const customerIds = await agent.getCustomersWithOutstandingBalance();
+    console.log(`Found ${customerIds.length} customers with outstanding balances\n`);
+
+    if (customerIds.length === 0) {
+      console.log('⚠️  No customers found. Run: npm run create-invoices to create sample data\n');
+      return;
+    }
+
+    // Example 1: Analyze risk for the first customer
     console.log('Example 1: Analyzing customer risk...');
-    const customerId = 'CUST-001';
+    const customerId = customerIds[0];
     const riskScore = await agent.analyzeCustomerRisk(customerId);
     console.log(`Risk Score: ${(riskScore.score * 100).toFixed(1)}%`);
     console.log(`Risk Level: ${riskScore.riskLevel}`);
@@ -32,7 +42,7 @@ async function main() {
     const prioritizedCustomers = await agent.prioritizeCollectionEfforts();
     console.log(`Top 3 priority customers:`);
     prioritizedCustomers.slice(0, 3).forEach((customer, index) => {
-      console.log(`  ${index + 1}. ${customer.customerName} (${customer.customerId})`);
+      console.log(`  ${index + 1}. ${customer.customerName} (${customer.customerId.substring(0, 8)}...)`);
       console.log(`     Risk: ${customer.riskScore.riskLevel}, Score: ${(customer.riskScore.score * 100).toFixed(1)}%`);
       console.log(`     Outstanding: $${customer.totalOutstanding.toFixed(2)}, Priority: ${(customer.priority * 100).toFixed(1)}`);
     });
@@ -40,7 +50,7 @@ async function main() {
 
     // Example 3: Summarize customer promises
     console.log('Example 3: Summarizing customer promises...');
-    const promiseSummary = await agent.summarizeCustomerPromises('CUST-001');
+    const promiseSummary = await agent.summarizeCustomerPromises(customerId);
     console.log(`Customer: ${promiseSummary.customerName}`);
     console.log(`Total Promises: ${promiseSummary.totalPromises}`);
     console.log(`Fulfilled: ${promiseSummary.fulfilledPromises}, Broken: ${promiseSummary.brokenPromises}, Pending: ${promiseSummary.pendingPromises}`);
@@ -65,7 +75,7 @@ async function main() {
 
     // Example 7: Record promise to pay
     console.log('Example 7: Recording promise to pay...');
-    await agent.recordPromiseToPay('CUST-001', 5000, '2026-03-01', 'Customer called and committed to payment');
+    await agent.recordPromiseToPay(customerId, 5000, '2026-03-01', 'Customer called and committed to payment');
     console.log();
 
   } catch (error) {

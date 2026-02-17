@@ -78,8 +78,8 @@ Format the response as JSON with "subject" and "body" fields. The body should be
             content: prompt,
           },
         ],
-        max_tokens: 800,
-        temperature: 0.7,
+        max_completion_tokens: 800,
+        // temperature removed - this model only supports default value
       });
 
       const content = response.choices[0]?.message?.content || '';
@@ -134,8 +134,8 @@ The message should be:
             content: prompt,
           },
         ],
-        max_tokens: 200,
-        temperature: 0.7,
+        max_completion_tokens: 200,
+        // temperature removed - this model only supports default value
       });
 
       return response.choices[0]?.message?.content || this.getFallbackTeamsMessage(customerName, arData);

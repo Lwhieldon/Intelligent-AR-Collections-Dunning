@@ -8,6 +8,8 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "discover": "ts-node src/utils/discoverEntities.ts",
+    "create-invoices": "ts-node src/utils/createSampleInvoices.ts",
+    "test-openai": "ts-node src/utils/testAzureOpenAI.ts",
     "test": "jest",
     "lint": "eslint src"
   },

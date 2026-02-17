@@ -190,13 +190,20 @@ Provide a concise recommendation (2-3 sentences) on the best collection approach
             content: prompt,
           },
         ],
-        max_tokens: 200,
-        temperature: 0.7,
+        max_completion_tokens: 200,  // Updated for newer models (GPT-4o, GPT-4.5)
+        // temperature removed - this model only supports default value
       });
 
       return response.choices[0]?.message?.content || 'Contact customer to discuss payment options.';
-    } catch (error) {
-      console.error('Error generating AI recommendation:', error);
+    } catch (error: any) {
+      // Log concise error message
+      if (error.status === 404) {
+        console.log(`⚠️  Azure OpenAI deployment not found. Using rule-based recommendation.`);
+      } else if (error.status === 401) {
+        console.log(`⚠️  Azure OpenAI authentication failed. Check API key.`);
+      } else {
+        console.log(`⚠️  Azure OpenAI unavailable: ${error.message}. Using rule-based recommendation.`);
+      }
       return this.getFallbackRecommendation(riskScore);
     }
   }

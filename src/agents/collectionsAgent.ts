@@ -21,6 +21,13 @@ export class CollectionsAgent {
   }
 
   /**
+   * Get list of customers with outstanding balances
+   */
+  async getCustomersWithOutstandingBalance(): Promise<string[]> {
+    return await this.erpConnector.getCustomersWithOutstandingBalance();
+  }
+
+  /**
    * Analyze customer risk and get recommendations
    */
   async analyzeCustomerRisk(customerId: string): Promise<RiskScore> {
