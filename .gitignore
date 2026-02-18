@@ -33,3 +33,6 @@ Thumbs.db
 examples/**/*.js
 examples/**/*.d.ts
 examples/**/*.js.map
+
+# Personal/demo files - not for public repo
+DEMO_SCRIPT.md
