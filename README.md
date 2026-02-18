@@ -104,23 +104,28 @@ Risk levels:
 ### Run Interactive Examples
 
 ```bash
-# Complete workflow with random customer selection
+# Complete workflow with random customer selection (risk analysis + email + Teams + D365 update)
 npx ts-node examples/collections-workflow.ts workflow
 
-# Batch processing and prioritization
+# Batch processing and prioritization across all customers
 npx ts-node examples/collections-workflow.ts batch
 
 # Detailed risk analysis with payment history
 npx ts-node examples/collections-workflow.ts analysis
+
+# Test Teams messaging specifically
+npx ts-node examples/collections-workflow.ts teams
 ```
 
-### Enable Email Testing
+### Enable Email & Teams Testing
 
 Add to your `.env` file:
 ```bash
-TEST_CUSTOMER_EMAIL=your-email@domain.com
-TEST_COLLECTIONS_EMAIL=your-email@domain.com
+TEST_CUSTOMER_EMAIL=your-email@domain.com          # Receives test dunning emails
+TEST_COLLECTIONS_EMAIL=colleague@yourorg.com       # Receives Teams notifications (must be a different user)
 ```
+
+> **Note**: `TEST_COLLECTIONS_EMAIL` must be a **different user** from your signed-in account. Teams cannot create a one-on-one chat with yourself.
 
 ### Programmatic API
 
@@ -157,18 +162,23 @@ await agent.recordPromiseToPay('CUST-001', 5000, '2026-03-01', 'Payment committe
 ```
 src/
 ├── agents/
-│   ├── collectionsAgent.ts      # Main agent orchestration
-│   └── declarativeAgent.json    # Copilot Studio configuration
+│   ├── collectionsAgent.ts       # Main orchestration — coordinates all services
+│   └── declarativeAgent.json     # Copilot Studio agent definition
 ├── connectors/
-│   ├── erpConnector.ts          # ERP system integration
-│   └── graphConnector.ts        # Microsoft Graph integration
+│   ├── erpConnector.ts           # Dynamics 365 OData REST API integration
+│   └── graphConnector.ts         # Microsoft Graph (email + Teams)
 ├── services/
-│   ├── riskScoringService.ts    # Risk calculation & ML
-│   ├── dunningService.ts        # GenAI communication generation
-│   └── paymentPlanService.ts    # Payment plan creation
+│   ├── riskScoringService.ts     # Weighted risk algorithm + Azure OpenAI
+│   ├── dunningService.ts         # GPT-5 communication generation
+│   └── paymentPlanService.ts     # Payment schedule calculation
 ├── utils/
-│   ├── discoverEntities.ts      # Discover Entities
-└── types.ts                         # TypeScript interfaces
+│   ├── testAzureOpenAI.ts        # Test Azure OpenAI connectivity
+│   ├── createSampleInvoices.ts   # Create test data in Dynamics 365
+│   └── discoverEntities.ts       # Discover available D365 entities
+├── types.ts                      # TypeScript interfaces
+└── index.ts                      # Main entry point
+examples/
+└── collections-workflow.ts       # Runnable workflow examples
 ```
 
 ## 🔐 Security & Compliance
@@ -229,7 +239,7 @@ This project meets the following [Microsoft Agents League - Enterprise Agents](h
 - **[Setup Guide](docs/SETUP.md)** - Detailed setup and configuration instructions
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
 - **[Copilot Studio Plugins](docs/COPILOT_STUDIO_PLUGINS.md)** - Plugin configuration guide
-- **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
+- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
 - **[Examples](examples/)** - Example workflows and usage patterns
 
 ## 📄 License & Legal

@@ -6,9 +6,9 @@
 Successfully implemented a complete end-to-end Intelligent Collections and Dunning system using Microsoft 365 Agents Toolkit, Copilot Studio, Azure OpenAI, and Microsoft Graph API.
 
 ### Implementation Statistics
-- **Total Source Files**: 9 TypeScript files + 1 JSON configuration
-- **Total Lines of Code**: ~1,070 lines
-- **Documentation**: 4 comprehensive markdown documents
+- **Total Source Files**: 11 TypeScript files + 1 JSON configuration
+- **Total Lines of Code**: ~1,300 lines
+- **Documentation**: 5 comprehensive markdown documents
 - **Build Status**: ✅ Passing
 - **Lint Status**: ✅ Clean
 - **Security Scan**: ✅ No vulnerabilities detected
@@ -71,9 +71,9 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 
 ### 7. Microsoft Graph Connector
 **File**: `src/connectors/graphConnector.ts`
-- **Outlook email integration**: Send dunning emails
-- **Teams messaging**: Create chats and send messages
-- **CRM integration**: Add notes to SharePoint lists
+- **Outlook email integration**: Send personalized dunning emails via `/me/sendMail`
+- **Teams messaging**: Create one-on-one chats and send collections alerts via Graph API
+- **Dynamics 365 write-back**: PATCH account description field with collections activity notes and audit trail
 - Uses Azure AD interactive browser authentication (local sign-in)
 - Properly passes device compliance for Conditional Access policies
 - Emails sent from signed-in user's mailbox
@@ -93,19 +93,20 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 
 ### 9. Example Workflows
 **File**: `examples/collections-workflow.ts`
-- Three complete workflow examples with production features:
-  - **Complete workflow**: Random customer selection, detailed risk breakdown, optional email sending
-  - **Batch processing**: Prioritizes and processes all high-risk customers
-  - **Detailed analysis**: Shows full risk factors and payment promise history
+- Four complete workflow examples with production features:
+  - **Complete workflow** (`workflow`): Random customer selection, risk analysis, GPT-5 email, Teams alert (high-risk), D365 write-back
+  - **Batch processing** (`batch`): Prioritizes and displays all customers ranked by risk score × balance
+  - **Detailed analysis** (`analysis`): Shows full risk factors, aging breakdown, and payment promise history
+  - **Teams test** (`teams`): Dedicated Teams messaging test for the first customer
 - **Email testing enabled**: Set `TEST_CUSTOMER_EMAIL` in `.env` to send actual emails
+- **Teams testing enabled**: Set `TEST_COLLECTIONS_EMAIL` to a colleague's email (must be different from signed-in user)
 - **Smart automation**: Automatically sends emails/Teams messages based on risk level
 
-### 10. Discover Entities
-**File**: `utils/discoverEntities.ts`
-- Discover what Entities you have in Dynamics 365 Environment:
-  - Authenticates using .env variables
-  - Identifies what you actively have in your tentnat
-  - Informs you if you need to install further apps (e.g., D265 Sales, Enterprise Edition App)
+### 10. Utility Scripts
+**Files**: `src/utils/`
+- **`testAzureOpenAI.ts`**: Validates Azure OpenAI connectivity and GPT-5 reasoning model response
+- **`createSampleInvoices.ts`**: Populates Dynamics 365 with test invoices, payment history (Tasks), and promise-to-pay records (Appointments) for all configured customers
+- **`discoverEntities.ts`**: Discovers available entities in your Dynamics 365 environment; identifies which apps are installed (e.g., D365 Sales, Enterprise Edition) and verifies required entities (account, invoice, task, appointment) are accessible
 
 ## Key Features Implemented
 
@@ -173,11 +174,20 @@ Detailed architecture documentation:
 - Compliance framework
 
 ### 4. docs/COPILOT_STUDIO_PLUGINS.md
-Plugin configuration guide:
-- Graph connector setup
-- Declarative agent import
-- Security considerations
-- Setup instructions
+Copilot Studio agent configuration guide:
+- Two-layer architecture overview (Conversational + Execution layers)
+- Agent identity, instructions, and conversation starters
+- All 4 Dynamics 365 knowledge source entities with OData queries and field documentation
+- Both authentication flows (Client Credentials for D365, Interactive Browser for Graph)
+- Write-back operations and audit trail documentation
+- Copilot Studio vs Execution Layer capability comparison
+
+### 5. docs/IMPLEMENTATION_SUMMARY.md
+This document — complete implementation overview:
+- Component-by-component breakdown
+- Feature checklist
+- Technology stack
+- Deployment guide
 
 ## Technology Stack
 
