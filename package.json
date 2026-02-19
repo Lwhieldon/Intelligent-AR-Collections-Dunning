@@ -6,6 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "mcp-server": "node dist/mcp/erpMcpServer.js",
+    "mcp-server:dev": "ts-node src/mcp/erpMcpServer.ts",
     "dev": "ts-node src/index.ts",
     "discover": "ts-node src/utils/discoverEntities.ts",
     "create-invoices": "ts-node src/utils/createSampleInvoices.ts",
@@ -28,6 +30,7 @@
     "@azure/openai": "^2.0.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@microsoft/teams-ai": "^1.7.4",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "axios": "^1.13.5",
     "dotenv": "^16.4.7",
     "openai": "4.77.4"

@@ -56,14 +56,25 @@ The system is built as two complementary layers that share the same Dynamics 365
 ║   │  │   ERP Connector     │   │    Graph Connector       │  │    ║
 ║   │  │  (erpConnector.ts)  │   │  (graphConnector.ts)     │  │    ║
 ║   │  │                     │   │                          │  │    ║
-║   │  │  • D365 OData API   │   │  • /me/sendMail          │  │    ║
-║   │  │  • OAuth2 client    │   │  • /chats (create)       │  │    ║
-║   │  │    credentials      │   │  • /chats/{id}/messages  │  │    ║
-║   │  │  • Account queries  │   │  • /users/{email}        │  │    ║
-║   │  │  • Invoice queries  │   │  • Interactive browser   │  │    ║
-║   │  │  • Task queries     │   │    authentication        │  │    ║
-║   │  │  • Appt. queries    │   └──────────────┬───────────┘  │    ║
-║   │  │  • Account PATCH    │                  │              │    ║
+║   │  │  MCP CLIENT         │   │  • /me/sendMail          │  │    ║
+║   │  │  • Spawns MCP server│   │  • /chats (create)       │  │    ║
+║   │  │  • Calls tools via  │   │  • /chats/{id}/messages  │  │    ║
+║   │  │    stdio transport  │   │  • /users/{email}        │  │    ║
+║   │  └──────────┬──────────┘   │  • Interactive browser   │  │    ║
+║   │             │ stdio/MCP    │    authentication        │  │    ║
+║   │  ┌──────────▼──────────┐   └──────────────┬───────────┘  │    ║
+║   │  │  ERP MCP Server     │                  │              │    ║
+║   │  │ (erpMcpServer.ts)   │                  │              │    ║
+║   │  │                     │                  │              │    ║
+║   │  │  MCP SERVER (stdio) │                  │              │    ║
+║   │  │  Tools:             │                  │              │    ║
+║   │  │  • get_ar_aging_data│                  │              │    ║
+║   │  │  • get_payment_hist │                  │              │    ║
+║   │  │  • get_customers    │                  │              │    ║
+║   │  │  • update_notes     │                  │              │    ║
+║   │  │                     │                  │              │    ║
+║   │  │  OAuth2 credentials │                  │              │    ║
+║   │  │  D365 OData calls   │                  │              │    ║
 ║   │  └──────────┬──────────┘                  │              │    ║
 ║   └─────────────╪───────────────────────────╪──────────────┘      ║
 ╚═════════════════╪═══════════════════════════╪════════════════════╝
@@ -97,20 +108,26 @@ The system is built as two complementary layers that share the same Dynamics 365
 
 ```
 Collections Agent
-  └─▶ ERPConnector.getARAgingData(customerId)
-        └─▶ GET /accounts({customerId})            → customer name
-        └─▶ GET /invoices?filter=customerid        → active invoices
-        └─▶ GET /invoicedetails?filter=invoiceid   → line items (for totals)
-        └─▶ calculateARAgingFromDynamicsInvoices() → aging buckets
-  └─▶ ERPConnector.getPaymentHistory(customerId)
-        └─▶ GET /tasks?filter=regardingobjectid    → payment records
-        └─▶ GET /appointments?filter=regardingobjectid → promise records
-        └─▶ calculatePaymentHistoryFromRecords()   → stats
+  └─▶ ERPConnector.getARAgingData(customerId)          ← MCP client call
+        └─▶ [MCP] tool: get_ar_aging_data              ← JSON-RPC over stdio
+              └─▶ erpMcpServer handles tool call
+                    └─▶ GET /accounts({customerId})    → customer name
+                    └─▶ GET /invoices?filter=customerid        → active invoices
+                    └─▶ GET /invoicedetails?filter=invoiceid   → line items
+                    └─▶ calculateARAgingFromDynamicsInvoices() → aging buckets
+              └─▶ returns ARAgingData JSON via MCP response
+  └─▶ ERPConnector.getPaymentHistory(customerId)        ← MCP client call
+        └─▶ [MCP] tool: get_payment_history            ← JSON-RPC over stdio
+              └─▶ erpMcpServer handles tool call
+                    └─▶ GET /tasks?filter=regardingobjectid    → payment records
+                    └─▶ GET /appointments?filter=regardingobjectid → promises
+                    └─▶ calculatePaymentHistoryFromRecords()   → stats
+              └─▶ returns PaymentHistory JSON via MCP response
   └─▶ RiskScoringService.calculateRiskScore(arData, paymentHistory)
-        └─▶ calculateAgingScore()                  → 50% weight
-        └─▶ calculatePaymentHistoryScore()         → 30% weight
-        └─▶ calculatePromiseKeepingScore()         → 20% weight
-        └─▶ Azure OpenAI GPT-5                     → recommendation text
+        └─▶ calculateAgingScore()                      → 50% weight
+        └─▶ calculatePaymentHistoryScore()             → 30% weight
+        └─▶ calculatePromiseKeepingScore()             → 20% weight
+        └─▶ Azure OpenAI GPT-5                         → recommendation text
   └─▶ Returns: RiskScore { score, riskLevel, factors, recommendation }
 ```
 
@@ -358,13 +375,11 @@ then generates a context-aware recommendation string. For example:
 
 ```
 DEMO_MODE=true
-  └─▶ Mock data returned from erpConnector.ts
-  └─▶ No Dynamics 365 connection required
-  └─▶ Useful for testing without D365 access
+  └─▶ erpMcpServer returns mock data (no D365 connection required)
+  └─▶ Useful for testing and demos without D365 credentials
 
 DEMO_MODE=false  (default)
-  └─▶ Live Dynamics 365 OData queries
-  └─▶ Random customer selection per workflow run
+  └─▶ erpMcpServer makes live Dynamics 365 OData queries
   └─▶ Real invoice aging, payment history, promise records
 ```
 
@@ -441,6 +456,7 @@ For production deployment beyond the current local/demo setup:
 ## Related Documentation
 
 - [SETUP.md](SETUP.md) — Step-by-step configuration guide
+- [MCP_SERVER.md](MCP_SERVER.md) — ERP MCP Server reference, tool schemas, and interaction examples
 - [COPILOT_STUDIO_PLUGINS.md](COPILOT_STUDIO_PLUGINS.md) — Copilot Studio agent configuration
 - [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) — Component overview
 - [../README.md](../README.md) — Project overview

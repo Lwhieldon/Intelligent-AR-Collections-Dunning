@@ -28,35 +28,39 @@
 
 ### 2. External MCP Server Integration (8 points)
 - **Status**: ✅ IMPLEMENTED
-- **File**: `src/connectors/erpConnector.ts`
-- **Evidence**:
+- **Files**: `src/mcp/erpMcpServer.ts` (server), `src/connectors/erpConnector.ts` (client)
+- **Protocol**: Model Context Protocol (MCP) — stdio transport, JSON-RPC message framing
+- **SDK**: `@modelcontextprotocol/sdk` v1.26.0
+- **Architecture**:
+  - `erpMcpServer.ts` is a standalone MCP server that exposes ERP data as tools
+  - `erpConnector.ts` is an MCP client that spawns the server as a child process and calls its tools
+  - The client and server communicate over stdin/stdout (stdio transport)
+- **MCP Tools exposed by the server**:
   - **Read Operations**:
-    - `getARAgingData()` - Fetch AR aging buckets
-    - `getPaymentHistory()` - Fetch payment records
-    - `getCustomersWithOutstandingBalance()` - List customers
+    - `get_ar_aging_data` — Fetch AR aging buckets and invoice details for a customer
+    - `get_payment_history` — Fetch payment history and promise-to-pay records
+    - `get_customers_with_outstanding_balance` — List all customers with balances
   - **Write Operations**:
-    - `updateCustomerNotes()` - Update ERP notes
-  - **Integration**: Dynamics 365 RESTful API with OAuth2 authentication
-  - **Authentication**: `@azure/identity` ClientSecretCredential
-  - Configurable via environment variables
+    - `update_customer_notes` — Append a collections note to the ERP customer record
+- **Integration**: Dynamics 365 OData REST API with OAuth2 client credentials flow
+- **Standalone server**: `npm run mcp-server` starts the server independently
 
 ### 3. OAuth Security for MCP Server (5 points)
 - **Status**: ✅ IMPLEMENTED
-- **File**: `src/connectors/erpConnector.ts`
+- **File**: `src/mcp/erpMcpServer.ts`
 - **Evidence**:
-  - **OAuth2 Client Credentials Flow** implemented for Dynamics 365 ERP integration
+  - **OAuth2 Client Credentials Flow** inside the MCP server for Dynamics 365 access
   - Uses `@azure/identity` ClientSecretCredential for enterprise-grade token management
   - **Implementation Details**:
-    - `getAccessToken()` method handles token acquisition from Azure AD
-    - Automatic token caching and refresh before expiration
-    - Scope-based authentication: `${ERP_RESOURCE}/.default`
-    - All API methods (`getARAgingData`, `getPaymentHistory`, etc.) use OAuth2 tokens
-  - **Configuration**:
+    - `getAccessToken()` acquires tokens from Azure AD scoped to `${ERP_RESOURCE}/.default`
+    - Automatic token caching and refresh via the Azure Identity SDK
+    - All four MCP tool handlers acquire a fresh (or cached) OAuth2 token before calling D365
+  - **Configuration** (env vars consumed by the MCP server):
     - `ERP_CLIENT_ID`: Azure AD application client ID
     - `ERP_CLIENT_SECRET`: Azure AD application client secret
     - `ERP_TENANT_ID`: Azure AD tenant identifier
     - `ERP_RESOURCE`: Dynamics 365 resource URL
-  - Microsoft Entra ID integration in both `erpConnector.ts` and `graphConnector.ts`
+  - Microsoft Entra ID integration in both `erpMcpServer.ts` and `graphConnector.ts`
   - Environment-based credential management (no hardcoded secrets)
   - Production-ready with Azure Key Vault support
   - Complete setup documentation in `SETUP.md` (Section 3)

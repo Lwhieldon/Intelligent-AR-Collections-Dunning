@@ -80,6 +80,8 @@ async function main() {
 
   } catch (error) {
     console.error('Error during execution:', error);
+  } finally {
+    await agent.close();
   }
 
   console.log('=== System execution complete ===');

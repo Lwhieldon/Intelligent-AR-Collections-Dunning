@@ -20,6 +20,11 @@ export class CollectionsAgent {
     this.paymentPlanService = new PaymentPlanService();
   }
 
+  /** Shut down the MCP server child process spawned by the ERP connector. */
+  async close(): Promise<void> {
+    await this.erpConnector.close();
+  }
+
   /**
    * Get list of customers with outstanding balances
    */

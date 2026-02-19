@@ -37,8 +37,14 @@ End-to-end collections management – Analyze AR aging and payment history to id
    - **Payment Plan Service** (`src/services/paymentPlanService.ts`): Automated payment plan creation
 
 4. **Connectors**
-   - **ERP Connector** (`src/connectors/erpConnector.ts`): Interface to AR aging and payment data
+   - **ERP Connector** (`src/connectors/erpConnector.ts`): MCP client — spawns the ERP MCP Server and calls its tools
    - **Graph Connector** (`src/connectors/graphConnector.ts`): Microsoft Graph API for email, Teams, and CRM
+
+5. **ERP MCP Server** (`src/mcp/erpMcpServer.ts`)
+   - Standalone external MCP server (Model Context Protocol, stdio transport)
+   - Exposes 4 ERP tools: `get_ar_aging_data`, `get_payment_history`, `get_customers_with_outstanding_balance`, `update_customer_notes`
+   - Contains all Dynamics 365 OData REST API logic with OAuth2 authentication
+   - Supports both demo mode (mock data) and production mode (live Dynamics 365)
 
 ## 🚀 Quick Start
 
@@ -83,6 +89,8 @@ npm start
 ## 📖 Documentation
 
 - [Setup Guide](docs/SETUP.md) - Detailed setup and configuration instructions
+- [ERP MCP Server](docs/MCP_SERVER.md) - MCP server tool reference, protocol details, and interaction examples
+- [Architecture](docs/ARCHITECTURE.md) - System architecture including MCP layer
 - [Copilot Studio Plugins](docs/COPILOT_STUDIO_PLUGINS.md) - Plugin configuration guide
 - [Examples](examples/) - Example workflows and usage patterns
 
@@ -116,6 +124,32 @@ npx ts-node examples/collections-workflow.ts analysis
 # Test Teams messaging specifically
 npx ts-node examples/collections-workflow.ts teams
 ```
+
+### Interact with the ERP MCP Server Directly
+
+These examples call MCP tools directly — bypassing the Collections Agent — to show the raw MCP protocol in action:
+
+```bash
+# Discover all tools the MCP server exposes (names, descriptions, schemas)
+npx ts-node examples/mcp-client-example.ts list
+
+# Full walkthrough: all 5 tools against one customer (e.g.,: CUST-001)
+npx ts-node examples/mcp-client-example.ts all CUST-001
+
+# Fetch AR aging buckets + invoices for a customer
+npx ts-node examples/mcp-client-example.ts aging CUST-002
+
+# Fetch payment history and promise-to-pay records
+npx ts-node examples/mcp-client-example.ts history CUST-003
+
+# List all customers with outstanding balances
+npx ts-node examples/mcp-client-example.ts customers
+
+# Write a collections note back to the ERP (write operation)
+npx ts-node examples/mcp-client-example.ts notes CUST-001 "Agreed to payment plan, first installment March 1"
+```
+
+> See [docs/MCP_SERVER.md](docs/MCP_SERVER.md) for tool schemas, protocol details, and expected output.
 
 ### Enable Email & Teams Testing
 
@@ -165,8 +199,10 @@ src/
 │   ├── collectionsAgent.ts       # Main orchestration — coordinates all services
 │   └── declarativeAgent.json     # Copilot Studio agent definition
 ├── connectors/
-│   ├── erpConnector.ts           # Dynamics 365 OData REST API integration
+│   ├── erpConnector.ts           # MCP client — spawns & calls the ERP MCP Server
 │   └── graphConnector.ts         # Microsoft Graph (email + Teams)
+├── mcp/
+│   └── erpMcpServer.ts           # External MCP server — exposes 4 ERP tools via stdio
 ├── services/
 │   ├── riskScoringService.ts     # Weighted risk algorithm + Azure OpenAI
 │   ├── dunningService.ts         # GPT-5 communication generation
@@ -223,7 +259,7 @@ This project meets the following [Microsoft Agents League - Enterprise Agents](h
 - **Microsoft 365 Copilot Chat Agent** - Declarative agent configured for M365 Agents Toolkit (`src/agents/declarativeAgent.json`)
 
 ### Bonus Features ✅
-- **External MCP Server Integration** - ERP connector for read/write operations (`src/connectors/erpConnector.ts`)
+- **External MCP Server Integration** - Standalone MCP server (`src/mcp/erpMcpServer.ts`) exposing 4 ERP tools via stdio transport, consumed by an MCP client in `src/connectors/erpConnector.ts`
 - **Adaptive Cards for UI/UX** - Action confirmations use Adaptive Cards in declarative agent
 - **Connected Architecture** - Multiple services (Risk Scoring, Dunning, Payment Plan) working together
 
@@ -238,6 +274,7 @@ This project meets the following [Microsoft Agents League - Enterprise Agents](h
 
 - **[Setup Guide](docs/SETUP.md)** - Detailed setup and configuration instructions
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
+- **[ERP MCP Server](docs/MCP_SERVER.md)** - MCP server tool reference, protocol details, and interaction examples
 - **[Copilot Studio Plugins](docs/COPILOT_STUDIO_PLUGINS.md)** - Plugin configuration guide
 - **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
 - **[Examples](examples/)** - Example workflows and usage patterns
