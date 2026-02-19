@@ -32,13 +32,13 @@ End-to-end collections management – Analyze AR aging and payment history to id
    - Coordinates between services and connectors
 
 3. **Services**
-   - **Risk Scoring Service**: ML-based risk calculation using Azure OpenAI
-   - **Dunning Service**: GenAI-powered communication generation
-   - **Payment Plan Service**: Automated payment plan creation
+   - **Risk Scoring Service** (`src/services/riskScoringService.ts`): ML-based risk calculation using Azure OpenAI
+   - **Dunning Service** (`src/services/dunningService.ts`): GenAI-powered communication generation
+   - **Payment Plan Service** (`src/services/paymentPlanService.ts`): Automated payment plan creation
 
 4. **Connectors**
-   - **ERP Connector**: Interface to AR aging and payment data
-   - **Graph Connector**: Microsoft Graph API for email, Teams, and CRM
+   - **ERP Connector** (`src/connectors/erpConnector.ts`): Interface to AR aging and payment data
+   - **Graph Connector** (`src/connectors/graphConnector.ts`): Microsoft Graph API for email, Teams, and CRM
 
 ## 🚀 Quick Start
 

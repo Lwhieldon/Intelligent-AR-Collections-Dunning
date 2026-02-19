@@ -65,7 +65,7 @@ The system is built as two complementary layers that share the same Dynamics 365
 ║   │  │  • Appt. queries    │   └──────────────┬───────────┘  │    ║
 ║   │  │  • Account PATCH    │                  │              │    ║
 ║   │  └──────────┬──────────┘                  │              │    ║
-║   └─────────────╪───────────────────────────╪──────────────┘    ║
+║   └─────────────╪───────────────────────────╪──────────────┘      ║
 ╚═════════════════╪═══════════════════════════╪════════════════════╝
                   │                           │
     ┌─────────────▼──────────┐   ┌────────────▼────────────────┐
@@ -235,7 +235,7 @@ The system reads from and writes to these Dynamics 365 entities:
         │  invoice (READ)                                     │
         │  ────────────────────────────────────────────────── │
         │  invoiceid          PK                              │
-        │  _customerid_value  FK → account                   │
+        │  _customerid_value  FK → account                    │
         │  totalamount        Calculated from invoicedetails  │
         │  duedate            Used for aging bucket calc      │
         │  datedelivered      Invoice issue date              │
@@ -246,7 +246,7 @@ The system reads from and writes to these Dynamics 365 entities:
         │  invoicedetail (READ)                               │
         │  ────────────────────────────────────────────────── │
         │  invoicedetailid    PK                              │
-        │  _invoiceid_value   FK → invoice                   │
+        │  _invoiceid_value   FK → invoice                    │
         │  extendedamount     Line item total (summed for     │
         │  baseamount         invoice totalamount)            │
         │  quantity           Used if extended/base missing   │
@@ -265,10 +265,10 @@ The system reads from and writes to these Dynamics 365 entities:
 ┌────────────────────────────────────────────────────────────────┐
 │  appointment (READ)  — Promise-to-pay records                  │
 │  ─────────────────────────────────────────────────────────     │
-│  _regardingobjectid_value  FK → account                       │
-│  subject     "Promise to Pay - Fulfilled"                     │
-│              "Promise to Pay - Broken"                        │
-│  scheduledend  Promise due date                               │
+│  _regardingobjectid_value  FK → account                        │
+│  subject     "Promise to Pay - Fulfilled"                      │
+│              "Promise to Pay - Broken"                         │
+│  scheduledend  Promise due date                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -412,8 +412,8 @@ For production deployment beyond the current local/demo setup:
 └─────────────────────────────────────────────────────────────────┘
                     │                        │
          ┌──────────▼──────────┐   ┌─────────▼────────────┐
-         │   Dynamics 365      │   │   Microsoft 365       │
-         │   (Dataverse)       │   │   (Graph API)         │
+         │   Dynamics 365      │   │   Microsoft 365      │
+         │   (Dataverse)       │   │   (Graph API)        │
          └─────────────────────┘   └──────────────────────┘
 ```
 

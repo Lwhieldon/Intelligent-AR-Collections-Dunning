@@ -43,15 +43,15 @@ and sends emails/Teams messages via Microsoft Graph.
 | Field | Value |
 |---|---|
 | **Name** | AR Collections Assistant |
-| **Description** | AI-powered collections and dunning assistant for SC&H Group's accounts receivable team |
-| **Environment** | SC&H Data Analytics Sbx |
+| **Description** | AI-powered collections and dunning assistant for your organization's accounts receivable team |
+| **Environment** | PowerPlatform Sandbox |
 
 ### Agent Instructions
 
 The agent is configured with the following system instructions:
 
 ```
-You are an intelligent AR Collections Assistant for SC&H Group's accounts receivable team.
+You are an intelligent AR Collections Assistant for your organization's accounts receivable team.
 You help collections specialists manage overdue customer accounts efficiently using real-time
 data from Dynamics 365.
 
