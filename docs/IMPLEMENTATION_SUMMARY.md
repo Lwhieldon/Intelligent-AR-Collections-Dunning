@@ -6,9 +6,9 @@
 Successfully implemented a complete end-to-end Intelligent Collections and Dunning system using Microsoft 365 Agents Toolkit, Copilot Studio, Azure OpenAI, and Microsoft Graph API.
 
 ### Implementation Statistics
-- **Total Source Files**: 11 TypeScript files + 1 JSON configuration
-- **Total Lines of Code**: ~1,300 lines
-- **Documentation**: 5 comprehensive markdown documents
+- **Total Source Files**: 13 TypeScript files + 1 JSON configuration
+- **Total Lines of Code**: ~1,700 lines
+- **Documentation**: 6 comprehensive markdown documents
 - **Build Status**: ✅ Passing
 - **Lint Status**: ✅ Clean
 - **Security Scan**: ✅ No vulnerabilities detected
@@ -61,15 +61,26 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 - Amortization calculations for interest-bearing plans
 - HTML-formatted payment schedules for email communication
 
-### 6. ERP Connector
-**File**: `src/connectors/erpConnector.ts`
-- REST API integration with ERP systems
-- Retrieves AR aging data and payment history
-- Updates customer notes
-- Lists customers with outstanding balances
-- Configurable via environment variables
+### 6. ERP MCP Server
+**File**: `src/mcp/erpMcpServer.ts`
+- Standalone **external MCP server** using stdio transport and JSON-RPC 2.0 framing
+- Uses `@modelcontextprotocol/sdk` v1.26.0 (`Server`, `StdioServerTransport`)
+- Exposes 4 ERP tools: `get_ar_aging_data`, `get_payment_history`, `get_customers_with_outstanding_balance`, `update_customer_notes`
+- All Dynamics 365 OData REST API logic (accounts, invoices, invoicedetails, tasks, appointments)
+- OAuth2 client credentials flow using `@azure/identity` ClientSecretCredential
+- Supports `DEMO_MODE=true` (mock data) or production (live D365)
+- Amount resolution fallback chain: `extendedamount → baseamount → quantity*price → header amount`
+- Runnable standalone via `npm run mcp-server` or `npm run mcp-server:dev`
 
-### 7. Microsoft Graph Connector
+### 7. ERP Connector (MCP Client)
+**File**: `src/connectors/erpConnector.ts`
+- Thin **MCP client** wrapper — spawns `erpMcpServer.ts` as a child process
+- Lazy initialization: server starts on first method call, reused for the session lifetime
+- Communicates over stdin/stdout (stdio transport) using JSON-RPC 2.0
+- Maintains identical public API: `getARAgingData`, `getPaymentHistory`, `getCustomersWithOutstandingBalance`, `updateCustomerNotes`, `close()`
+- `close()` terminates the MCP child process, allowing Node.js to exit cleanly
+
+### 8. Microsoft Graph Connector
 **File**: `src/connectors/graphConnector.ts`
 - **Outlook email integration**: Send personalized dunning emails via `/me/sendMail`
 - **Teams messaging**: Create one-on-one chats and send collections alerts via Graph API
@@ -80,7 +91,7 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 - Works with managed/corporate devices
 - Lower security risk with delegated permissions
 
-### 8. Type Definitions
+### 9. Type Definitions
 **File**: `src/types.ts`
 - Comprehensive TypeScript interfaces for all data models
 - 11 interface definitions covering:
@@ -91,7 +102,7 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
   - Payment plans and schedules
   - CRM notes
 
-### 9. Example Workflows
+### 10. Example Workflows
 **File**: `examples/collections-workflow.ts`
 - Four complete workflow examples with production features:
   - **Complete workflow** (`workflow`): Random customer selection, risk analysis, GPT-5 email, Teams alert (high-risk), D365 write-back
@@ -101,8 +112,15 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 - **Email testing enabled**: Set `TEST_CUSTOMER_EMAIL` in `.env` to send actual emails
 - **Teams testing enabled**: Set `TEST_COLLECTIONS_EMAIL` to a colleague's email (must be different from signed-in user)
 - **Smart automation**: Automatically sends emails/Teams messages based on risk level
+- **Clean shutdown**: All functions call `agent.close()` in a `finally` block to terminate the MCP child process
 
-### 10. Utility Scripts
+**File**: `examples/mcp-client-example.ts`
+- Direct MCP protocol interaction — bypasses `CollectionsAgent` to show raw MCP in action
+- Six commands: `list`, `aging <id>`, `history <id>`, `customers`, `notes <id> <msg>`, `all <id>`
+- `all` runs all 5 MCP tool interactions over a single persistent connection
+- Shows both parsed output and raw JSON-RPC responses
+
+### 11. Utility Scripts
 **Files**: `src/utils/`
 - **`testAzureOpenAI.ts`**: Validates Azure OpenAI connectivity and GPT-5 reasoning model response
 - **`createSampleInvoices.ts`**: Populates Dynamics 365 with test invoices, payment history (Tasks), and promise-to-pay records (Appointments) for all configured customers
@@ -123,9 +141,9 @@ Successfully implemented a complete end-to-end Intelligent Collections and Dunni
 - Support for both automated and manual communications
 
 ### ✅ Integration Architecture
-- ERP system integration for AR data
-- CRM system integration for notes
-- Microsoft Graph API for Microsoft 365 services
+- **External MCP Server** (`src/mcp/erpMcpServer.ts`) — ERP data via Model Context Protocol
+- **MCP Client** (`src/connectors/erpConnector.ts`) — spawns server, calls tools over stdio
+- Microsoft Graph API for Microsoft 365 services (email, Teams)
 - Copilot Studio plugin support
 
 ### ✅ Collections Features
@@ -173,7 +191,15 @@ Detailed architecture documentation:
 - Risk scoring algorithm details
 - Compliance framework
 
-### 4. docs/COPILOT_STUDIO_PLUGINS.md
+### 4. docs/MCP_SERVER.md
+ERP MCP Server reference:
+- Tool schemas with input/output JSON examples
+- Architecture diagram (MCP client → server → D365)
+- Running examples with expected output (demo mode)
+- Raw JSON-RPC 2.0 message format
+- Step-by-step guide for adding new tools
+
+### 5. docs/COPILOT_STUDIO_PLUGINS.md
 Copilot Studio agent configuration guide:
 - Two-layer architecture overview (Conversational + Execution layers)
 - Agent identity, instructions, and conversation starters
@@ -182,7 +208,7 @@ Copilot Studio agent configuration guide:
 - Write-back operations and audit trail documentation
 - Copilot Studio vs Execution Layer capability comparison
 
-### 5. docs/IMPLEMENTATION_SUMMARY.md
+### 6. docs/IMPLEMENTATION_SUMMARY.md
 This document — complete implementation overview:
 - Component-by-component breakdown
 - Feature checklist
@@ -199,10 +225,11 @@ This document — complete implementation overview:
 - **Framework**: M365 Agents Toolkit
 
 ### Dependencies
+- `@modelcontextprotocol/sdk`: MCP server and client (v1.26.0)
 - `@azure/openai`: Azure OpenAI SDK
 - `@azure/identity`: Azure authentication
 - `@microsoft/microsoft-graph-client`: Graph API client
-- `axios`: HTTP client for ERP integration
+- `axios`: HTTP client for Dynamics 365 OData API calls
 - `dotenv`: Environment configuration
 
 ### Development Tools

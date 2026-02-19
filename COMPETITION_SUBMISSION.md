@@ -19,11 +19,13 @@
 ### ✅ Bonus Criteria (OPTIONAL - Extra Points)
 
 - [x] **External MCP Server Integration (8 points)**
-  - Implementation: `src/connectors/erpConnector.ts`
-  - Read Operations: Fetches AR aging data, payment history, customer lists
-  - Write Operations: Updates customer notes in ERP system
-  - RESTful API integration with Dynamics 365
-  - OAuth2 authentication with automatic token management
+  - **Server**: `src/mcp/erpMcpServer.ts` — standalone MCP server (stdio transport, JSON-RPC 2.0)
+  - **Client**: `src/connectors/erpConnector.ts` — MCP client that spawns the server as a child process
+  - **SDK**: `@modelcontextprotocol/sdk` v1.26.0
+  - **Read Operations** (MCP tools): `get_ar_aging_data`, `get_payment_history`, `get_customers_with_outstanding_balance`
+  - **Write Operations** (MCP tool): `update_customer_notes`
+  - Dynamics 365 OData REST API with OAuth2 client credentials flow inside the MCP server
+  - Standalone server runnable via `npm run mcp-server`
 
 - [x] **Adaptive Cards for UI/UX (5 points)**
   - Implementation: `src/agents/declarativeAgent.json` (actions section)
@@ -70,9 +72,10 @@
 - [x] **LICENSE** - MIT License included
 - [x] **CODE_OF_CONDUCT.md** - Community standards
 - [x] **DISCLAIMER.md** - Security and legal notices
-- [x] **SETUP.md** - Installation and configuration guide
-- [x] **ARCHITECTURE.md** - System architecture documentation
-- [x] **IMPLEMENTATION_SUMMARY.md** - Complete implementation details
+- [x] **docs/SETUP.md** - Installation and configuration guide
+- [x] **docs/ARCHITECTURE.md** - System architecture documentation
+- [x] **docs/MCP_SERVER.md** - ERP MCP Server tool reference and interaction examples
+- [x] **docs/IMPLEMENTATION_SUMMARY.md** - Complete implementation details
 
 ### 🏗️ Build & Quality
 
@@ -124,6 +127,7 @@ This solution addresses a critical enterprise need: managing accounts receivable
 - **Platform**: Microsoft 365 Agents Toolkit
 - **AI/ML**: Azure OpenAI (GPT-4/GPT-5)
 - **Integration**: Microsoft Graph API, Dynamics 365
+- **MCP Protocol**: `@modelcontextprotocol/sdk` v1.26.0 (stdio transport, JSON-RPC 2.0)
 - **Language**: TypeScript
 - **Runtime**: Node.js 18+
 - **Authentication**: Azure AD / Microsoft Entra ID with OAuth2
@@ -131,9 +135,9 @@ This solution addresses a critical enterprise need: managing accounts receivable
 
 ### OAuth2 Security Implementation
 
-**Full OAuth2 client credentials flow implemented for Dynamics 365 ERP integration:**
+**Full OAuth2 client credentials flow implemented inside the ERP MCP Server for Dynamics 365 access:**
 
-**Implementation Details** (`src/connectors/erpConnector.ts`):
+**Implementation Details** (`src/mcp/erpMcpServer.ts`):
 - Uses `@azure/identity` ClientSecretCredential for secure authentication
 - Automatic token acquisition from Azure AD token endpoint
 - Token caching and automatic refresh before expiration
@@ -171,20 +175,26 @@ This solution addresses a critical enterprise need: managing accounts receivable
 │   │   ├── dunningService.ts           # GenAI communications
 │   │   └── paymentPlanService.ts       # Payment plan generation
 │   ├── connectors/
-│   │   ├── erpConnector.ts             # ERP integration
-│   │   └── graphConnector.ts           # Microsoft Graph
+│   │   ├── erpConnector.ts             # MCP client — spawns & calls ERP MCP Server
+│   │   └── graphConnector.ts           # Microsoft Graph (email + Teams)
+│   ├── mcp/
+│   │   └── erpMcpServer.ts             # Standalone MCP server — exposes 4 ERP tools
 │   ├── utils/
-│   │   ├── discoverEntities.ts         # Discover Entities
+│   │   ├── testAzureOpenAI.ts          # Azure OpenAI connectivity test
+│   │   ├── createSampleInvoices.ts     # Create test data in Dynamics 365
+│   │   └── discoverEntities.ts         # Discover available D365 entities
 │   ├── types.ts                        # TypeScript interfaces
 │   └── index.ts                        # Entry point
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   └── COPILOT_STUDIO_PLUGINS.md
-│   └── SETUP.md
+│   ├── COPILOT_STUDIO_PLUGINS.md
+│   ├── MCP_SERVER.md
+│   ├── SETUP.md
+│   └── IMPLEMENTATION_SUMMARY.md
 ├── examples/
-│   └── collections-workflow.ts
+│   ├── collections-workflow.ts         # End-to-end workflow examples
+│   └── mcp-client-example.ts          # Direct MCP server interaction examples
 ├── README.md
-├── IMPLEMENTATION_SUMMARY.md
 ├── DISCLAIMER.md
 ├── CODE_OF_CONDUCT.md
 └── LICENSE

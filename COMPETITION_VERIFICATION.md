@@ -165,9 +165,10 @@
 - [x] `DISCLAIMER.md` - Security and legal notices
 - [x] `docs/SETUP.md` - Installation and configuration
 - [x] `COMPETITION_SUBMISSION.md` - Competition checklist
-- [x] `docs/ARCHITECTURE.md` - System architecture
+- [x] `docs/ARCHITECTURE.md` - System architecture (includes MCP layer diagram)
+- [x] `docs/MCP_SERVER.md` - ERP MCP Server tool reference and interaction examples
 - [x] `docs/COPILOT_STUDIO_PLUGINS.md` - Plugin configuration
-- [x] `IMPLEMENTATION_SUMMARY.md` - Implementation details
+- [x] `docs/IMPLEMENTATION_SUMMARY.md` - Implementation details
 
 ---
 
