@@ -72,12 +72,20 @@ npm install
 
 ### Configuration
 
-1. Copy `.env.example` to `.env`:
+This project uses two env files (each loaded by a different system):
+
+| File | Loaded by | Contains |
+|---|---|---|
+| `.env` | `dotenv.config()` in Node/TS source | Azure OpenAI, Dynamics 365, Graph credentials |
+| `env/.env.local` | M365 Agents Toolkit | Teams app IDs, `API_BASE_URL` for Copilot |
+
 ```bash
+# Copy the template and fill in your credentials in both locations
 cp .env.example .env
+cp .env.example env/.env.local
 ```
 
-2. Configure your environment variables in `.env`. See [SETUP.md](docs/SETUP.md) for detailed configuration instructions, especially for Dynamics 365 OAuth2 authentication.
+See [SETUP.md](docs/SETUP.md) for detailed configuration instructions, especially for Dynamics 365 OAuth2 authentication. `.env.example` documents all variables for both files.
 
 ### Build and Run
 
@@ -98,7 +106,7 @@ The agent is packaged as a **Declarative Agent** that runs natively inside Micro
 M365 Copilot Chat
     └── Declarative Agent  (appPackage/declarativeAgent.json)
             └── API Plugin (appPackage/apiPlugin.json)
-                    └── REST API  (npm run api-server  →  port 3978)
+                    └── REST API  (npm run api-server  →  port 3000)
                             └── CollectionsAgent
                                     ├── ERP MCP Server → Dynamics 365
                                     └── Microsoft Graph → Email + Teams
@@ -110,43 +118,40 @@ M365 Copilot Chat
 ```bash
 npm run api-server
 ```
-Keep this running. It exposes the collections capabilities on `http://localhost:3978`.
+Keep this running. It exposes the collections capabilities on `http://localhost:3000`.
 
-**2. Expose the API publicly** (required for Copilot to reach it)
+**2. Expose the API publicly** (required for Copilot to reach it from the cloud)
 
-Use [Dev Tunnels](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started) or ngrok:
+Use VS Code's built-in Dev Tunnel (no install needed) or ngrok:
+```
+VS Code PORTS tab → Forward Port 3000 → Port Visibility → Public
+Copy the https://*.devtunnels.ms URL
+```
 ```bash
-# Dev Tunnels (recommended — built into VS Code)
-devtunnel host -p 3978 --allow-anonymous
-
 # ngrok alternative
-ngrok http 3978
-```
-Copy the public HTTPS URL (e.g. `https://abc123.devtunnels.ms`).
-
-**3. Update the OpenAPI server URL**
-
-Edit `appPackage/openapi.yaml` and set the first server URL to your tunnel URL:
-```yaml
-servers:
-  - url: https://abc123.devtunnels.ms   # ← your tunnel URL
+ngrok http 3000
 ```
 
-**4. Add app icons**
+**3. Set the tunnel URL and provision**
 
-Add 192×192 `color.png` and 32×32 `outline.png` to `appPackage/icons/`.
-See `appPackage/icons/README.md` for generation instructions.
+Edit `env/.env.local` and set `API_BASE_URL` to your tunnel URL (no trailing slash):
+```env
+API_BASE_URL=https://your-tunnel-url.devtunnels.ms
+```
 
-**5. Package and sideload**
-
+Then provision via the M365 Agents Toolkit CLI:
 ```bash
-npm run package
+npx @microsoft/teamsapp-cli provision --env local --interactive false
 ```
+This packages `appPackage/` with your tunnel URL substituted into `openapi.yaml`, uploads it to Teams Developer Portal, and extends the agent to M365 Copilot Chat.
 
-Then sideload in Teams:
-- Go to **Teams → Apps → Manage your apps → Upload an app**
-- Choose **"Upload a custom app"**
-- Select `appPackage/build/ar-collections-agent.zip`
+**4. App icons**
+
+Place 192×192 `color.png` and 32×32 `outline.png` directly in `appPackage/`.
+Generate them from any source image:
+```bash
+npm run generate-icons
+```
 
 The **AR Collections & Dunning Assistant** will appear in Microsoft 365 Copilot Chat as a named agent.
 
@@ -302,8 +307,9 @@ appPackage/                        # ← M365 Copilot Chat deployment package
 ├── manifest.json                  #   Teams app manifest (declarative agent registration)
 ├── declarativeAgent.json          #   Agent instructions, starters, and action binding
 ├── apiPlugin.json                 #   API Plugin — maps Copilot intents to REST calls
-├── openapi.yaml                   #   OpenAPI 3.0 spec for the REST API
-└── icons/                         #   App icons (color.png 192×192, outline.png 32×32)
+├── openapi.yaml                   #   OpenAPI 3.0 spec (uses ${{API_BASE_URL}} placeholder)
+├── color.png                      #   App icon — 192×192 full color
+└── outline.png                    #   App icon — 32×32 white silhouette
 src/
 ├── api/
 │   └── collectionsApi.ts          # Express REST API — consumed by the declarative agent
@@ -331,10 +337,14 @@ examples/
 ├── collections-workflow.ts        # Scripted workflow examples
 └── mcp-client-example.ts          # Direct MCP server interaction examples
 scripts/
-└── package-app.js                 # Creates appPackage ZIP for Teams sideloading
-teamsapp.yml                       # M365 Agents Toolkit deployment configuration
+├── package-app.js                 # Creates appPackage ZIP (legacy sideload path)
+└── generate-icons.js              # Generates color.png / outline.png from a source image
+m365agents.local.yml               # M365 Agents Toolkit — local provision pipeline
+teamsapp.local.yml                 # Compatibility shim for teamsapp CLI (v1.8 schema)
+teamsapp.yml                       # M365 Agents Toolkit — production deployment config
+.env.example                       # Single template for ALL env variables (committed)
 env/
-└── .env.dev.template              # Environment template for Teams Toolkit
+└── .env.local                     # Toolkit runtime vars — gitignored, auto-managed
 ```
 
 ## 🔐 Security & Compliance
@@ -391,8 +401,8 @@ This project meets the following [Microsoft Agents League - Enterprise Agents](h
 - **Connected Architecture** — Five interconnected services: REST API → Collections Agent → Risk Scoring + Dunning + Payment Plan + ERP MCP Server + Microsoft Graph
 
 ### Security & Best Practices ✅
-- Environment-based configuration (`.env.example` provided, `env/.env.dev.template` for Teams Toolkit)
-- No hardcoded secrets
+- Single `.env.example` template documents all variables for both the API server (`.env`) and M365 Agents Toolkit (`env/.env.local`)
+- No hardcoded secrets — both runtime env files are gitignored
 - Comprehensive `.gitignore` for security (env files, build artifacts gitignored)
 - Microsoft Entra ID authentication — delegated (Graph) + client credentials (D365)
 - Audit logging implemented

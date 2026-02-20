@@ -21,13 +21,23 @@ Microsoft Dynamics 365, Microsoft Graph, and Copilot Studio.
 ## Project Structure
 
 ```
+appPackage/                       # M365 Copilot Chat deployment package
+├── manifest.json                 # Teams app manifest (v1.19)
+├── declarativeAgent.json         # Agent instructions, starters, and plugin binding
+├── apiPlugin.json                # API Plugin — maps Copilot intents to REST calls
+├── openapi.yaml                  # OpenAPI 3.0 spec (uses ${{API_BASE_URL}} placeholder)
+├── color.png                     # App icon — 192×192 full color
+└── outline.png                   # App icon — 32×32 white silhouette
 src/
+├── api/
+│   └── collectionsApi.ts         # Express REST API (port 3000) — consumed by the agent
 ├── agents/
-│   ├── collectionsAgent.ts       # Main orchestration — coordinates all services
-│   └── declarativeAgent.json     # Copilot Studio agent definition
+│   └── collectionsAgent.ts       # Main orchestration — coordinates all services
 ├── connectors/
-│   ├── erpConnector.ts           # Dynamics 365 OData REST API integration
+│   ├── erpConnector.ts           # MCP client — spawns & calls the ERP MCP Server
 │   └── graphConnector.ts         # Microsoft Graph (email + Teams)
+├── mcp/
+│   └── erpMcpServer.ts           # External MCP server — exposes ERP tools via stdio
 ├── services/
 │   ├── riskScoringService.ts     # Weighted risk algorithm + Azure OpenAI
 │   ├── dunningService.ts         # GPT-5 communication generation
@@ -39,11 +49,23 @@ src/
 ├── types.ts                      # TypeScript interfaces
 └── index.ts                      # Main entry point
 examples/
-└── collections-workflow.ts       # Runnable workflow examples
+├── chat.ts                       # Interactive terminal chat (demo)
+├── collections-workflow.ts       # Scripted workflow examples
+└── mcp-client-example.ts         # Direct MCP server interaction
+scripts/
+├── generate-icons.js             # Generates color.png / outline.png from a source image
+└── package-app.js                # Creates appPackage ZIP (legacy sideload path)
+m365agents.local.yml              # M365 Agents Toolkit — local provision pipeline
+teamsapp.local.yml                # CLI compatibility shim (v1.8 schema)
+teamsapp.yml                      # M365 Agents Toolkit — production deployment config
+.env.example                      # Template for ALL env variables (committed)
+env/
+└── .env.local                    # Toolkit runtime vars — gitignored, auto-managed
 docs/
 ├── SETUP.md                      # This file
 ├── ARCHITECTURE.md               # System architecture overview
-└── COPILOT_STUDIO_PLUGINS.md     # Copilot Studio agent configuration
+├── MCP_SERVER.md                 # ERP MCP Server tool reference
+└── COPILOT_STUDIO_PLUGINS.md     # Legacy Copilot Studio plugin notes
 ```
 
 ---
@@ -69,13 +91,22 @@ npm run build
 
 ## Configuration
 
-### Step 1: Copy Environment File
+This project uses two env files, each loaded by a different system:
+
+| File | Loaded by | Contains |
+|---|---|---|
+| `.env` | `dotenv.config()` in Node/TS source | Azure OpenAI, Dynamics 365, Graph credentials |
+| `env/.env.local` | M365 Agents Toolkit | Teams app IDs, `API_BASE_URL` for Copilot |
+
+Both files are gitignored. `.env.example` in the project root documents all variables for both.
+
+### Step 1: Copy the template
 
 ```bash
 cp .env.example .env
 ```
 
-### Step 2: Complete `.env` Configuration
+### Step 2: Complete `.env`
 
 ```env
 # Azure OpenAI
@@ -102,11 +133,31 @@ RISK_THRESHOLD_MEDIUM=0.3
 
 # Email & Teams Testing
 TEST_CUSTOMER_EMAIL=your-email@domain.com       # Receives test dunning emails
-TEST_COLLECTIONS_EMAIL=colleague@domain.com      # Receives Teams notifications (must be a different user)
+TEST_COLLECTIONS_EMAIL=colleague@domain.com      # Receives Teams notifications (must be different user)
 
 # Data Mode
 DEMO_MODE=false    # false = real Dynamics 365 data | true = mock data
 ```
+
+### Step 3: Configure `env/.env.local` (Copilot deployment only)
+
+`env/.env.local` is created automatically by the M365 Agents Toolkit on first provision.
+The only value you must set before provisioning is `API_BASE_URL`.
+
+```env
+# Set this to your public HTTPS tunnel URL (no trailing slash):
+API_BASE_URL=https://your-tunnel-url.devtunnels.ms
+
+# All other values below are written automatically by the Toolkit:
+TEAMS_APP_ID=
+APP_NAME_SUFFIX=local
+TEAMSFX_ENV=local
+TEAMS_APP_TENANT_ID=
+M365_TITLE_ID=
+M365_APP_ID=
+```
+
+See the **Deploy to M365 Copilot Chat** section below for full instructions.
 
 ---
 
@@ -373,19 +424,63 @@ RISK_THRESHOLD_MEDIUM=0.3
 
 ---
 
-## Copilot Studio Agent
+## Deploy to M365 Copilot Chat
 
-The AR Collections Assistant is a separate conversational layer deployed in Copilot Studio.
-It reads directly from Dynamics 365 and uses the risk scoring instructions to answer
-natural language questions in M365 Copilot Chat.
+The AR Collections Assistant is a **Declarative Agent** that runs natively inside
+Microsoft 365 Copilot Chat. The agent calls the local Express API through a public
+HTTPS tunnel, which in turn queries Dynamics 365 via the ERP MCP Server.
 
-**Knowledge sources (4 Dynamics 365 entities):**
-- **Account** — customer names and notes
-- **Invoice** — AR aging data and totals
-- **Task** — payment history records
-- **Appointment** — promise-to-pay records
+### Prerequisites
+- M365 account with custom app sideloading enabled
+- VS Code with M365 Agents Toolkit extension (for GUI workflow) — or use the CLI
 
-See [COPILOT_STUDIO_PLUGINS.md](COPILOT_STUDIO_PLUGINS.md) for full setup instructions.
+### Step 1: Start the API server
+```bash
+npm run api-server
+```
+Runs on `http://localhost:3000`. Keep this terminal open.
+
+### Step 2: Create a public HTTPS tunnel
+The M365 Copilot cloud service must be able to reach your local API.
+
+**VS Code built-in (no install needed):**
+1. VS Code → bottom panel → **PORTS** tab
+2. **Forward a Port** → `3000` → Enter
+3. Right-click the port → **Port Visibility** → **Public**
+4. Copy the `https://*.devtunnels.ms` URL
+
+**Or ngrok:**
+```bash
+ngrok http 3000
+```
+
+### Step 3: Set `API_BASE_URL` and provision
+Edit `env/.env.local` — set `API_BASE_URL` to your tunnel URL, **no trailing slash**:
+```env
+API_BASE_URL=https://your-tunnel-url.devtunnels.ms
+```
+
+Then run provision (re-run any time `API_BASE_URL` changes):
+```bash
+npx @microsoft/teamsapp-cli provision --env local --interactive false
+```
+
+This runs 5 steps: create app → zip package (substituting `API_BASE_URL` into `openapi.yaml`) → validate → update Teams Dev Portal → extend to M365 Copilot.
+
+### Step 4: Use the agent
+Open [Microsoft 365 Copilot](https://m365.cloud.microsoft) → Copilot → select
+**AR Collections & Dunning Assistant** from the agent picker. Start a new conversation and try:
+
+```
+Show me the top 5 customers with outstanding AR balances and their risk scores.
+Draft dunning emails for all high-risk accounts and send to my inbox for review.
+Create a 6-month payment plan for the highest-risk customer.
+Send a Teams alert about the most overdue account to our collections team.
+```
+
+> **Important**: The VS Code Dev Tunnel only stays active while VS Code is open and
+> the forwarding is active. For a persistent production deployment, deploy the API
+> to Azure App Service and set `API_BASE_URL` to the Azure URL.
 
 ---
 
