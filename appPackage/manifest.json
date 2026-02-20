@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "id": "${{TEAMS_APP_ID}}",
   "developer": {
-    "name": "SC&H Group",
+    "name": "Lee Whieldon",
     "websiteUrl": "https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning",
     "privacyUrl": "https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning/blob/main/DISCLAIMER.md",
     "termsOfUseUrl": "https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning/blob/main/LICENSE"

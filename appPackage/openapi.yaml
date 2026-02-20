@@ -8,7 +8,7 @@ info:
     Backed by Azure OpenAI GPT-5, Dynamics 365, and Microsoft Graph.
   version: "1.0.0"
   contact:
-    name: SC&H Group
+    name: Lee Whieldon
     url: https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning
 
 servers:
