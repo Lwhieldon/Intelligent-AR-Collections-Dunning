@@ -25,34 +25,102 @@ async function createSampleInvoices() {
     const tokenResponse = await credential.getToken(scope);
     console.log('✅ Authentication successful!\n');
 
-    // Get sample accounts
-    console.log('Step 2: Getting sample accounts...');
+    const headers = {
+      'Authorization': `Bearer ${tokenResponse.token}`,
+      'Content-Type': 'application/json',
+      'OData-MaxVersion': '4.0',
+      'OData-Version': '4.0',
+    };
+
+    // Target number of customers to have with invoices — default 6, override via MAX_CUSTOMERS
+    const maxCustomers = parseInt(process.env.MAX_CUSTOMERS ?? '6', 10);
+
+    // Step 2: Get existing accounts
+    console.log('Step 2: Getting existing accounts...');
     const accountsResponse = await axios.get(
-      `${apiEndpoint}/accounts?$top=3`,
-      {
-        headers: {
-          'Authorization': `Bearer ${tokenResponse.token}`,
-          'OData-MaxVersion': '4.0',
-          'OData-Version': '4.0',
-        },
-      }
+      `${apiEndpoint}/accounts?$top=50&$select=accountid,name&$orderby=name asc`,
+      { headers },
     );
+    const existingAccounts: { accountid: string; name: string }[] = accountsResponse.data.value;
+    console.log(`✅ Found ${existingAccounts.length} existing accounts\n`);
 
-    const accounts = accountsResponse.data.value;
-    console.log(`✅ Found ${accounts.length} accounts\n`);
-
-    // Create sample invoices for each account
-    console.log('Step 3: Creating sample invoices...\n');
-
-    const invoiceAmounts = [
-      { current: 50000, days30: 30000, days60: 25000, days90: 15000, days120: 45000 },
-      { current: 60000, days30: 15000, days60: 10000, days90: 8000, days120: 32000 },
-      { current: 80000, days30: 50000, days60: 40000, days90: 20000, days120: 75000 },
+    // Step 3: Create new demo accounts if we need more
+    const sampleCompanyNames = [
+      'Alpine Ski House', 'Blue Yonder Airlines', 'City Power & Light',
+      'Coho Winery', 'Datum Corporation', 'Fourth Coffee',
+      'Graphic Design Institute', 'Humongous Insurance', 'Litware Inc',
+      'Lucerne Publishing', 'Margie\'s Travel', 'Proseware Inc',
+      'School of Fine Art', 'Southridge Video', 'Trey Research',
+      'Wide World Importers', 'Wingtip Toys',
     ];
 
-    for (let i = 0; i < Math.min(accounts.length, 3); i++) {
+    const existingNames = new Set(existingAccounts.map(a => a.name));
+    const newNames = sampleCompanyNames.filter(n => !existingNames.has(n));
+    const shortfall = Math.max(0, maxCustomers - existingAccounts.length);
+    const namesToCreate = newNames.slice(0, shortfall);
+
+    if (namesToCreate.length > 0) {
+      console.log(`Step 3: Creating ${namesToCreate.length} new demo accounts...`);
+      for (const name of namesToCreate) {
+        try {
+          const res = await axios.post(
+            `${apiEndpoint}/accounts`,
+            { name, description: 'AR Collections demo account', industrycode: 1 },
+            { headers: { ...headers, 'Prefer': 'return=representation' } },
+          );
+          existingAccounts.push({ accountid: res.data.accountid, name });
+          console.log(`  ✅ Created account: ${name}`);
+        } catch (err: any) {
+          console.log(`  ⚠️  Could not create ${name}: ${err.response?.data?.error?.message ?? err.message}`);
+        }
+      }
+      console.log();
+    }
+
+    // Pick a random subset of all available accounts (up to maxCustomers)
+    const shuffled = existingAccounts.sort(() => Math.random() - 0.5);
+    const accounts = shuffled.slice(0, Math.min(shuffled.length, maxCustomers));
+    console.log(`📋 Creating invoices for ${accounts.length} accounts\n`);
+
+    // Create sample invoices for each account
+    console.log('Step 4: Creating sample invoices...\n');
+
+    // Randomly generate varied invoice amounts so each customer has a distinct risk profile
+    function randomAmounts() {
+      const tier = Math.random();
+      if (tier < 0.3) {
+        // HIGH risk — heavy 90/120+ buckets
+        return {
+          current: 40000 + Math.floor(Math.random() * 60000),
+          days30:  20000 + Math.floor(Math.random() * 40000),
+          days60:  15000 + Math.floor(Math.random() * 30000),
+          days90:  10000 + Math.floor(Math.random() * 25000),
+          days120: 40000 + Math.floor(Math.random() * 80000),
+        };
+      } else if (tier < 0.65) {
+        // MEDIUM risk — moderate overdue
+        return {
+          current: 60000 + Math.floor(Math.random() * 80000),
+          days30:  15000 + Math.floor(Math.random() * 30000),
+          days60:   8000 + Math.floor(Math.random() * 15000),
+          days90:   3000 + Math.floor(Math.random() * 8000),
+          days120:  5000 + Math.floor(Math.random() * 20000),
+        };
+      } else {
+        // LOW risk — mostly current
+        return {
+          current: 80000 + Math.floor(Math.random() * 100000),
+          days30:   5000 + Math.floor(Math.random() * 10000),
+          days60:       0,
+          days90:       0,
+          days120:      0,
+        };
+      }
+    }
+
+    for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i];
-      const amounts = invoiceAmounts[i];
+      const amounts = randomAmounts();
 
       console.log(`Creating invoices for: ${account.name}`);
 
@@ -123,7 +191,7 @@ async function createSampleInvoices() {
 
       // Create sample payment history
       console.log('Creating payment history...');
-      await createPaymentHistory(tokenResponse.token, apiEndpoint, account.accountid, i);
+      await createPaymentHistory(tokenResponse.token, apiEndpoint, account.accountid);
 
       console.log('');
     }
@@ -230,16 +298,14 @@ async function createPaymentHistory(
   token: string,
   apiEndpoint: string,
   accountId: string,
-  customerIndex: number
 ) {
-  // Define payment patterns for each customer (varied for testing)
-  const paymentPatterns = [
-    { onTimeRate: 0.7, avgDaysLate: 15, promisesFulfilled: 0.6 }, // Customer 0: Decent payer
-    { onTimeRate: 0.5, avgDaysLate: 30, promisesFulfilled: 0.4 }, // Customer 1: Moderate risk
-    { onTimeRate: 0.3, avgDaysLate: 45, promisesFulfilled: 0.2 }, // Customer 2: High risk payer
-  ];
-
-  const pattern = paymentPatterns[customerIndex] || paymentPatterns[0];
+  // Randomly assign a payment pattern so each customer has distinct behavior
+  const rand = Math.random();
+  const pattern = rand < 0.3
+    ? { onTimeRate: 0.25, avgDaysLate: 55, promisesFulfilled: 0.2 }  // HIGH risk
+    : rand < 0.65
+    ? { onTimeRate: 0.60, avgDaysLate: 25, promisesFulfilled: 0.5 }  // MEDIUM risk
+    : { onTimeRate: 0.90, avgDaysLate:  8, promisesFulfilled: 0.9 }; // LOW risk
 
   try {
     // Create 10 historical payment records

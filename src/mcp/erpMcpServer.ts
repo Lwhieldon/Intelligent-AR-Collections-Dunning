@@ -264,13 +264,14 @@ function calculatePaymentHistoryFromRecords(
 }
 
 async function getCustomersWithOutstandingBalance(): Promise<string[]> {
-  if (DEMO_MODE) return ['CUST-001', 'CUST-002', 'CUST-003'];
+  if (DEMO_MODE) return ['CUST-001', 'CUST-002', 'CUST-003', 'CUST-004', 'CUST-005'];
 
   const token = await getAccessToken();
 
   try {
+    // Use $top=5000 so customers aren't missed when a few accounts have many invoices
     const res = await axios.get(
-      `${ERP_API_ENDPOINT}/invoices?$select=_customerid_value&$top=100`,
+      `${ERP_API_ENDPOINT}/invoices?$select=_customerid_value&$top=5000`,
       { headers: erpHeaders(token) },
     );
     const ids = new Set<string>();
@@ -280,7 +281,7 @@ async function getCustomersWithOutstandingBalance(): Promise<string[]> {
     return Array.from(ids);
   } catch {
     const res = await axios.get(
-      `${ERP_API_ENDPOINT}/accounts?$select=accountid&$top=10`,
+      `${ERP_API_ENDPOINT}/accounts?$select=accountid&$top=50`,
       { headers: erpHeaders(token) },
     );
     return res.data.value.map((a: any) => a.accountid);
@@ -335,36 +336,119 @@ function getMockARAgingData(customerId: string): ARAgingData {
     },
     'CUST-003': {
       customerId: 'CUST-003', customerName: 'Adventure Works',
-      totalOutstanding: 200000, current: 80000, days30: 50000,
-      days60: 40000, days90: 20000, days120Plus: 10000, invoices: [],
+      totalOutstanding: 320000, current: 80000, days30: 60000,
+      days60: 50000, days90: 0, days120Plus: 130000,
+      invoices: [{
+        invoiceId: 'INV-031',
+        invoiceDate: new Date(Date.now() - 140 * 86_400_000).toISOString(),
+        dueDate:     new Date(Date.now() - 110 * 86_400_000).toISOString(),
+        amount: 130000, amountPaid: 0, amountOutstanding: 130000, daysOverdue: 110,
+      }],
+    },
+    'CUST-004': {
+      customerId: 'CUST-004', customerName: 'Woodgrove Bank',
+      totalOutstanding: 45000, current: 40000, days30: 5000,
+      days60: 0, days90: 0, days120Plus: 0,
+      invoices: [{
+        invoiceId: 'INV-041',
+        invoiceDate: new Date(Date.now() - 20 * 86_400_000).toISOString(),
+        dueDate:     new Date(Date.now() + 10 * 86_400_000).toISOString(),
+        amount: 5000, amountPaid: 0, amountOutstanding: 5000, daysOverdue: 0,
+      }],
+    },
+    'CUST-005': {
+      customerId: 'CUST-005', customerName: 'Tailspin Toys',
+      totalOutstanding: 150000, current: 60000, days30: 40000,
+      days60: 30000, days90: 15000, days120Plus: 5000,
+      invoices: [{
+        invoiceId: 'INV-051',
+        invoiceDate: new Date(Date.now() - 80 * 86_400_000).toISOString(),
+        dueDate:     new Date(Date.now() - 50 * 86_400_000).toISOString(),
+        amount: 50000, amountPaid: 15000, amountOutstanding: 35000, daysOverdue: 50,
+      }],
     },
   };
   return data[customerId] ?? data['CUST-001'];
 }
 
 function getMockPaymentHistory(customerId: string): PaymentHistory {
-  return {
-    customerId,
-    averagePaymentDays: 35,
-    onTimePaymentRate:  0.67,
-    totalTransactions:  12,
-    lastPaymentDate: new Date(Date.now() - 30 * 86_400_000).toISOString(),
-    promiseToPayHistory: [
-      {
-        date:          new Date(Date.now() - 60 * 86_400_000).toISOString(),
-        promisedAmount: 25000,
-        promisedDate:  new Date(Date.now() - 30 * 86_400_000).toISOString(),
-        fulfilled: true,
-        actualPaymentDate: new Date(Date.now() - 30 * 86_400_000).toISOString(),
-      },
-      {
-        date:          new Date(Date.now() - 90 * 86_400_000).toISOString(),
-        promisedAmount: 35000,
-        promisedDate:  new Date(Date.now() - 75 * 86_400_000).toISOString(),
-        fulfilled: false,
-      },
-    ],
+  const histories: Record<string, PaymentHistory> = {
+    // CUST-001: Contoso Ltd — HIGH risk: chronic late payer, mostly broken promises
+    'CUST-001': {
+      customerId, averagePaymentDays: 52, onTimePaymentRate: 0.35,
+      totalTransactions: 18, lastPaymentDate: new Date(Date.now() - 75 * 86_400_000).toISOString(),
+      promiseToPayHistory: [
+        { date: new Date(Date.now() - 90 * 86_400_000).toISOString(), promisedAmount: 50000,
+          promisedDate: new Date(Date.now() - 60 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 120 * 86_400_000).toISOString(), promisedAmount: 30000,
+          promisedDate: new Date(Date.now() - 90 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 150 * 86_400_000).toISOString(), promisedAmount: 25000,
+          promisedDate: new Date(Date.now() - 120 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 118 * 86_400_000).toISOString() },
+        { date: new Date(Date.now() - 180 * 86_400_000).toISOString(), promisedAmount: 40000,
+          promisedDate: new Date(Date.now() - 150 * 86_400_000).toISOString(), fulfilled: false },
+      ],
+    },
+    // CUST-002: Fabrikam Inc — MEDIUM risk: sometimes late, mixed promises
+    'CUST-002': {
+      customerId, averagePaymentDays: 28, onTimePaymentRate: 0.65,
+      totalTransactions: 14, lastPaymentDate: new Date(Date.now() - 20 * 86_400_000).toISOString(),
+      promiseToPayHistory: [
+        { date: new Date(Date.now() - 45 * 86_400_000).toISOString(), promisedAmount: 20000,
+          promisedDate: new Date(Date.now() - 15 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 14 * 86_400_000).toISOString() },
+        { date: new Date(Date.now() - 80 * 86_400_000).toISOString(), promisedAmount: 15000,
+          promisedDate: new Date(Date.now() - 60 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 110 * 86_400_000).toISOString(), promisedAmount: 18000,
+          promisedDate: new Date(Date.now() - 90 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 88 * 86_400_000).toISOString() },
+      ],
+    },
+    // CUST-003: Adventure Works — HIGH risk: very late payer, almost all promises broken
+    'CUST-003': {
+      customerId, averagePaymentDays: 68, onTimePaymentRate: 0.25,
+      totalTransactions: 22, lastPaymentDate: new Date(Date.now() - 120 * 86_400_000).toISOString(),
+      promiseToPayHistory: [
+        { date: new Date(Date.now() - 30 * 86_400_000).toISOString(), promisedAmount: 80000,
+          promisedDate: new Date(Date.now() - 10 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 60 * 86_400_000).toISOString(), promisedAmount: 60000,
+          promisedDate: new Date(Date.now() - 30 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 90 * 86_400_000).toISOString(), promisedAmount: 50000,
+          promisedDate: new Date(Date.now() - 60 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 180 * 86_400_000).toISOString(), promisedAmount: 45000,
+          promisedDate: new Date(Date.now() - 150 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 145 * 86_400_000).toISOString() },
+      ],
+    },
+    // CUST-004: Woodgrove Bank — LOW risk: reliable payer, keeps all promises
+    'CUST-004': {
+      customerId, averagePaymentDays: 8, onTimePaymentRate: 0.95,
+      totalTransactions: 20, lastPaymentDate: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+      promiseToPayHistory: [
+        { date: new Date(Date.now() - 35 * 86_400_000).toISOString(), promisedAmount: 5000,
+          promisedDate: new Date(Date.now() - 5 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 5 * 86_400_000).toISOString() },
+        { date: new Date(Date.now() - 65 * 86_400_000).toISOString(), promisedAmount: 12000,
+          promisedDate: new Date(Date.now() - 35 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 34 * 86_400_000).toISOString() },
+      ],
+    },
+    // CUST-005: Tailspin Toys — MEDIUM risk: occasionally late, some broken promises
+    'CUST-005': {
+      customerId, averagePaymentDays: 38, onTimePaymentRate: 0.58,
+      totalTransactions: 16, lastPaymentDate: new Date(Date.now() - 40 * 86_400_000).toISOString(),
+      promiseToPayHistory: [
+        { date: new Date(Date.now() - 55 * 86_400_000).toISOString(), promisedAmount: 35000,
+          promisedDate: new Date(Date.now() - 25 * 86_400_000).toISOString(), fulfilled: false },
+        { date: new Date(Date.now() - 85 * 86_400_000).toISOString(), promisedAmount: 20000,
+          promisedDate: new Date(Date.now() - 55 * 86_400_000).toISOString(), fulfilled: true,
+          actualPaymentDate: new Date(Date.now() - 52 * 86_400_000).toISOString() },
+        { date: new Date(Date.now() - 115 * 86_400_000).toISOString(), promisedAmount: 25000,
+          promisedDate: new Date(Date.now() - 85 * 86_400_000).toISOString(), fulfilled: false },
+      ],
+    },
   };
+  return histories[customerId] ?? histories['CUST-001'];
 }
 
 // ---------------------------------------------------------------------------

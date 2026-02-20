@@ -1,0 +1,300 @@
+openapi: "3.0.1"
+info:
+  title: AR Collections & Dunning API
+  description: >
+    REST API for the Intelligent AR Collections & Dunning system.
+    Provides endpoints for customer risk analysis, dunning communications,
+    payment plans, Teams notifications, and promise-to-pay recording.
+    Backed by Azure OpenAI GPT-5, Dynamics 365, and Microsoft Graph.
+  version: "1.0.0"
+  contact:
+    name: SC&H Group
+    url: https://github.com/Lwhieldon/Intelligent-AR-Collections-Dunning
+
+servers:
+  - url: ${{API_BASE_URL}}
+    description: AR Collections API server (set API_BASE_URL in env/.env.local to your tunnel or deployed URL)
+
+paths:
+  /api/customers:
+    get:
+      operationId: getPrioritizedCustomers
+      summary: Get prioritized customer list
+      description: >
+        Returns customers ranked by a combined score of payment risk and outstanding
+        balance. Each record includes customer name, ID, total outstanding balance,
+        risk level, risk score, the three factor breakdowns (aging 50%, payment
+        history 30%, promise keeping 20%), and an AI-generated recommendation.
+        This is the primary entry point for every collections session.
+      parameters:
+        - name: top_n
+          in: query
+          description: Number of top-priority customers to return (default 5)
+          required: false
+          schema:
+            type: integer
+            default: 5
+            minimum: 1
+            maximum: 50
+      responses:
+        "200":
+          description: Prioritized customer list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PrioritizedCustomer"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /api/customers/{customerId}/risk:
+    get:
+      operationId: analyzeCustomerRisk
+      summary: Analyze customer payment risk
+      description: >
+        Performs a detailed risk analysis for a single customer using AR aging data
+        and full payment history. Returns risk score, risk level, factor breakdown,
+        and AI-generated recommendation. Use when deeper analysis is needed for
+        a specific customer.
+      parameters:
+        - $ref: "#/components/parameters/customerId"
+      responses:
+        "200":
+          description: Risk analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskScore"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /api/customers/{customerId}/dunning-email:
+    post:
+      operationId: sendDunningEmail
+      summary: Send personalized dunning email
+      description: >
+        Generates an AI-crafted, personalized dunning email for the customer
+        and sends it to the specified recipient. To allow the user to review
+        before it reaches the customer, pass the user's own email as recipientEmail.
+      parameters:
+        - $ref: "#/components/parameters/customerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientEmail
+              properties:
+                recipientEmail:
+                  type: string
+                  format: email
+                  description: Email address to send the dunning email to
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /api/customers/{customerId}/payment-plan:
+    post:
+      operationId: proposePaymentPlan
+      summary: Create and email a payment plan
+      description: >
+        Generates a tailored payment plan with full amortization schedule and
+        sends it as an HTML email to the specified address.
+      parameters:
+        - $ref: "#/components/parameters/customerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientEmail
+              properties:
+                recipientEmail:
+                  type: string
+                  format: email
+                  description: Email address to send the payment plan to
+                months:
+                  type: integer
+                  description: Number of monthly installments (default 6)
+                  default: 6
+                  minimum: 1
+                  maximum: 60
+      responses:
+        "200":
+          description: Payment plan sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /api/customers/{customerId}/teams-notification:
+    post:
+      operationId: sendTeamsNotification
+      summary: Send Teams alert to collections team
+      description: >
+        Sends a Teams message to a collections team member alerting them about
+        a high-priority account that needs immediate attention.
+      parameters:
+        - $ref: "#/components/parameters/customerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientEmail
+              properties:
+                recipientEmail:
+                  type: string
+                  format: email
+                  description: Email address of the collections team member to notify
+      responses:
+        "200":
+          description: Teams message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /api/customers/{customerId}/promise-to-pay:
+    post:
+      operationId: recordPromiseToPay
+      summary: Record a customer payment promise
+      description: >
+        Records a customer's verbal payment commitment in the ERP system with
+        the promised amount, date, and any additional context notes.
+      parameters:
+        - $ref: "#/components/parameters/customerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - date
+              properties:
+                amount:
+                  type: number
+                  description: Promised payment amount in US dollars
+                  minimum: 0
+                date:
+                  type: string
+                  format: date
+                  description: Promised payment date (YYYY-MM-DD)
+                notes:
+                  type: string
+                  description: Additional context about the promise
+      responses:
+        "200":
+          description: Promise recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "500":
+          $ref: "#/components/responses/Error"
+
+components:
+  parameters:
+    customerId:
+      name: customerId
+      in: path
+      required: true
+      description: Customer ID (GUID from Dynamics 365)
+      schema:
+        type: string
+
+  responses:
+    Error:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+  schemas:
+    PrioritizedCustomer:
+      type: object
+      properties:
+        customerId:
+          type: string
+          description: Customer ID (GUID)
+        customerName:
+          type: string
+          description: Customer display name
+        totalOutstanding:
+          type: number
+          description: Total outstanding balance in USD
+        priority:
+          type: number
+          description: Combined priority score (0–1, higher = more urgent)
+        riskScore:
+          $ref: "#/components/schemas/RiskScore"
+
+    RiskScore:
+      type: object
+      properties:
+        customerId:
+          type: string
+        score:
+          type: number
+          description: Risk score 0–1 (≥0.5 = HIGH, 0.3–0.5 = MEDIUM, <0.3 = LOW)
+        riskLevel:
+          type: string
+          enum: [low, medium, high]
+        factors:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskFactor"
+        recommendation:
+          type: string
+          description: AI-generated next-step recommendation
+
+    RiskFactor:
+      type: object
+      properties:
+        factor:
+          type: string
+          description: Factor name (e.g. "Aging Score")
+        impact:
+          type: number
+          description: Factor's contribution to the overall score
+        description:
+          type: string
+          description: Human-readable explanation
+
+    ActionResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sentTo:
+          type: string
+          description: Email address the action was sent to (where applicable)
+        months:
+          type: integer
+          description: Number of payment plan months (proposePaymentPlan only)

@@ -200,8 +200,11 @@ export class CollectionsAgent {
 
     for (const customerId of customerIds) {
       try {
+        // Fetch AR data and payment history once — avoids the duplicate fetch that
+        // would occur if we called analyzeCustomerRisk() (which re-fetches AR data)
         const arData = await this.erpConnector.getARAgingData(customerId);
-        const riskScore = await this.analyzeCustomerRisk(customerId);
+        const paymentHistory = await this.erpConnector.getPaymentHistory(customerId);
+        const riskScore = await this.riskScoringService.calculateRiskScore(arData, paymentHistory);
 
         // Calculate priority score: risk score (0-1) * 70% + normalized outstanding amount * 30%
         // This ensures high-risk accounts with large balances get highest priority

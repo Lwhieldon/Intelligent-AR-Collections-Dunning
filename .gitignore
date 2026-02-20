@@ -36,3 +36,12 @@ examples/**/*.js.map
 
 # Personal/demo files - not for public repo
 DEMO_SCRIPT.md
+
+# Teams Toolkit environment files (contain real credentials/URLs)
+env/.env.dev
+env/.env.local
+env/.env.staging
+env/.env.production
+appPackage/build/
+# Keep the template committed
+!env/.env.dev.template

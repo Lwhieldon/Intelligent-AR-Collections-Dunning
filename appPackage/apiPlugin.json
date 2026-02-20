@@ -1,0 +1,167 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.2/schema.json",
+  "schema_version": "v2.2",
+  "name_for_human": "AR Collections API",
+  "description_for_human": "Manage AR collections, risk scoring, dunning emails, and payment plans.",
+  "namespace": "arcollections",
+  "description_for_model": "Provides tools to manage accounts receivable collections. Use these tools to fetch prioritized customer lists with risk scores, analyze individual customer payment risk, send dunning emails, propose payment plans, send Teams alerts to collections staff, and record customer payment promises in Dynamics 365.",
+  "functions": [
+    {
+      "name": "getPrioritizedCustomers",
+      "description": "Get all customers ranked by combined risk score and outstanding balance. Returns complete data for each customer: name, ID, outstanding balance, risk level, risk score percentage, all three factor breakdowns (aging 50%, payment history 30%, promise keeping 20%), and AI-generated next-step recommendations. Use this as the starting point for any collections session.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "top_n": {
+            "type": "integer",
+            "description": "Number of top-priority customers to return. Default is 5.",
+            "default": "5"
+          }
+        },
+        "required": []
+      },
+      "returns": {
+        "type": "string",
+        "description": "JSON with a 'customers' array of prioritized customer records including risk scores and recommendations."
+      }
+    },
+    {
+      "name": "analyzeCustomerRisk",
+      "description": "Perform a detailed risk analysis for a specific customer. Returns the risk score, risk level, weighted factor breakdowns, and an AI-generated recommendation for next steps.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "The customer ID (GUID from Dynamics 365)"
+          }
+        },
+        "required": ["customerId"]
+      },
+      "returns": {
+        "type": "string",
+        "description": "JSON with score, riskLevel, factors array, and recommendation string."
+      }
+    },
+    {
+      "name": "sendDunningEmail",
+      "description": "Generate a personalized AI-crafted dunning email for a customer and send it to the specified email address. When the user wants to review before sending to the customer, use the user's own email address as recipientEmail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "The customer ID (GUID from Dynamics 365)"
+          },
+          "recipientEmail": {
+            "type": "string",
+            "description": "Email address to send the dunning email to."
+          }
+        },
+        "required": ["customerId", "recipientEmail"]
+      },
+      "returns": {
+        "type": "string",
+        "description": "JSON with success boolean and sentTo email address."
+      }
+    },
+    {
+      "name": "proposePaymentPlan",
+      "description": "Create a tailored payment plan with a full amortization schedule for a customer and send it as an HTML email to the specified address.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "The customer ID (GUID from Dynamics 365)"
+          },
+          "recipientEmail": {
+            "type": "string",
+            "description": "Email address to send the payment plan to."
+          },
+          "months": {
+            "type": "integer",
+            "description": "Number of monthly installments. Default is 6.",
+            "default": "6"
+          }
+        },
+        "required": ["customerId", "recipientEmail"]
+      },
+      "returns": {
+        "type": "string",
+        "description": "JSON with success boolean, sentTo email, and months count."
+      }
+    },
+    {
+      "name": "sendTeamsNotification",
+      "description": "Send a Teams message to a collections team member alerting them about a high-priority customer account that needs immediate attention.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "The customer ID (GUID from Dynamics 365)"
+          },
+          "recipientEmail": {
+            "type": "string",
+            "description": "Email address of the collections team member to notify via Teams."
+          }
+        },
+        "required": ["customerId", "recipientEmail"]
+      },
+      "returns": {
+        "type": "string",
+        "description": "JSON with success boolean and sentTo email address."
+      }
+    },
+    {
+      "name": "recordPromiseToPay",
+      "description": "Record a customer payment promise in the ERP system. Use when a customer has verbally committed to pay a specific amount by a specific date.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "The customer ID (GUID from Dynamics 365)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Promised payment amount in US dollars."
+          },
+          "date": {
+            "type": "string",
+            "description": "Promised payment date in YYYY-MM-DD format."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional context about the promise (optional)."
+          }
+        },
+        "required": ["customerId", "amount", "date"]
+      },
+      "returns": {
+        "type": "string",
+        "description": "JSON with success boolean."
+      }
+    }
+  ],
+  "runtimes": [
+    {
+      "type": "OpenApi",
+      "auth": {
+        "type": "None"
+      },
+      "spec": {
+        "url": "openapi.yaml"
+      },
+      "run_for_functions": [
+        "getPrioritizedCustomers",
+        "analyzeCustomerRisk",
+        "sendDunningEmail",
+        "proposePaymentPlan",
+        "sendTeamsNotification",
+        "recordPromiseToPay"
+      ]
+    }
+  ]
+}

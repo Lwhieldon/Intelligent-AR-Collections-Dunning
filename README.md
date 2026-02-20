@@ -52,7 +52,7 @@ End-to-end collections management – Analyze AR aging and payment history to id
 
 - Node.js 18 or higher
 - Azure OpenAI account with GPT-4 or GPT-5 deployment
-- Microsoft 365 account (you'll sign in to send emails/Teams messages)
+- Microsoft 365 account with sideloading enabled (for Copilot Chat deployment)
 - ERP system with API access (Dynamics 365 recommended)
 
 > **Note**: This system uses **interactive browser authentication** - a browser opens automatically on your device for sign-in, and the app sends emails/Teams messages from your mailbox. Works with managed devices and Conditional Access policies. No high-privilege application permissions required!
@@ -77,7 +77,7 @@ npm install
 cp .env.example .env
 ```
 
-2. Configure your environment variables in `.env`. See [SETUP.md](docs/SETUP.md) for detailed configuration instructions, especially for Dynamics 365 OAuth2 authentication
+2. Configure your environment variables in `.env`. See [SETUP.md](docs/SETUP.md) for detailed configuration instructions, especially for Dynamics 365 OAuth2 authentication.
 
 ### Build and Run
 
@@ -85,6 +85,83 @@ cp .env.example .env
 npm run build
 npm start
 ```
+
+---
+
+## 🤖 Deploy to Microsoft 365 Copilot Chat
+
+The agent is packaged as a **Declarative Agent** that runs natively inside Microsoft 365 Copilot Chat — no separate chat UI needed. Users access it directly within the M365 ecosystem.
+
+### Architecture: Declarative Agent + API Plugin + REST API
+
+```
+M365 Copilot Chat
+    └── Declarative Agent  (appPackage/declarativeAgent.json)
+            └── API Plugin (appPackage/apiPlugin.json)
+                    └── REST API  (npm run api-server  →  port 3978)
+                            └── CollectionsAgent
+                                    ├── ERP MCP Server → Dynamics 365
+                                    └── Microsoft Graph → Email + Teams
+```
+
+### Deploy Steps
+
+**1. Start the REST API backend**
+```bash
+npm run api-server
+```
+Keep this running. It exposes the collections capabilities on `http://localhost:3978`.
+
+**2. Expose the API publicly** (required for Copilot to reach it)
+
+Use [Dev Tunnels](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started) or ngrok:
+```bash
+# Dev Tunnels (recommended — built into VS Code)
+devtunnel host -p 3978 --allow-anonymous
+
+# ngrok alternative
+ngrok http 3978
+```
+Copy the public HTTPS URL (e.g. `https://abc123.devtunnels.ms`).
+
+**3. Update the OpenAPI server URL**
+
+Edit `appPackage/openapi.yaml` and set the first server URL to your tunnel URL:
+```yaml
+servers:
+  - url: https://abc123.devtunnels.ms   # ← your tunnel URL
+```
+
+**4. Add app icons**
+
+Add 192×192 `color.png` and 32×32 `outline.png` to `appPackage/icons/`.
+See `appPackage/icons/README.md` for generation instructions.
+
+**5. Package and sideload**
+
+```bash
+npm run package
+```
+
+Then sideload in Teams:
+- Go to **Teams → Apps → Manage your apps → Upload an app**
+- Choose **"Upload a custom app"**
+- Select `appPackage/build/ar-collections-agent.zip`
+
+The **AR Collections & Dunning Assistant** will appear in Microsoft 365 Copilot Chat as a named agent.
+
+**6. Use in Copilot Chat**
+
+Open Microsoft 365 Copilot Chat and type `@AR Collections` or select the agent from the agent picker. Use the built-in conversation starters or type naturally:
+
+```
+Show me the top 5 customers with outstanding AR balances and their risk scores.
+Draft dunning emails for all high-risk accounts and send to my inbox for review.
+Create a 6-month payment plan for the highest-risk customer.
+Send a Teams alert about the most overdue account to our collections team.
+```
+
+> See [docs/SETUP.md](docs/SETUP.md) for full deployment instructions including production Azure hosting.
 
 ## 📖 Documentation
 
@@ -109,7 +186,34 @@ Risk levels:
 
 ## 💻 Usage Examples
 
-### Run Interactive Examples
+### 💬 Interactive Chat (Recommended for Demo)
+
+Start a natural-language chat session powered by Azure OpenAI function calling:
+
+```bash
+npx ts-node examples/chat.ts
+```
+
+Then type requests in plain English — the assistant interprets your intent, queries Dynamics 365 via the MCP server, runs risk analysis, drafts emails, and confirms every action:
+
+```
+You: Show me top 5 customers with outstanding AR balances, their risk scores, and next steps.
+     Draft a dunning email for each high-risk account and send to my inbox for review.
+
+  ⚙  Fetching top 5 priority customers...
+  ⚙  Drafting & sending dunning email to lwhieldon@schgroup.com  (b4cea450...)
+  ⚙  Drafting & sending dunning email to lwhieldon@schgroup.com  (a7f3b120...)
+```
+
+More example prompts:
+```
+"Create a 6-month payment plan for the highest-risk customer and send to my inbox"
+"Which customers have broken the most payment promises?"
+"Send a Teams alert to jbrummett@schgroup.com about the top overdue account"
+"Record that the top customer promised $50,000 by March 15"
+```
+
+### Run Scripted Examples
 
 ```bash
 # Complete workflow with random customer selection (risk analysis + email + Teams + D365 update)
@@ -133,7 +237,7 @@ These examples call MCP tools directly — bypassing the Collections Agent — t
 # Discover all tools the MCP server exposes (names, descriptions, schemas)
 npx ts-node examples/mcp-client-example.ts list
 
-# Full walkthrough: all 5 tools against one customer (e.g.,: CUST-001)
+# Full walkthrough: all 5 tools against one customer (default: CUST-001)
 npx ts-node examples/mcp-client-example.ts all CUST-001
 
 # Fetch AR aging buckets + invoices for a customer
@@ -194,27 +298,43 @@ await agent.recordPromiseToPay('CUST-001', 5000, '2026-03-01', 'Payment committe
 ## 📁 Project Structure
 
 ```
+appPackage/                        # ← M365 Copilot Chat deployment package
+├── manifest.json                  #   Teams app manifest (declarative agent registration)
+├── declarativeAgent.json          #   Agent instructions, starters, and action binding
+├── apiPlugin.json                 #   API Plugin — maps Copilot intents to REST calls
+├── openapi.yaml                   #   OpenAPI 3.0 spec for the REST API
+└── icons/                         #   App icons (color.png 192×192, outline.png 32×32)
 src/
+├── api/
+│   └── collectionsApi.ts          # Express REST API — consumed by the declarative agent
 ├── agents/
-│   ├── collectionsAgent.ts       # Main orchestration — coordinates all services
-│   └── declarativeAgent.json     # Copilot Studio agent definition
+│   └── collectionsAgent.ts        # Main orchestration — coordinates all services
 ├── connectors/
-│   ├── erpConnector.ts           # MCP client — spawns & calls the ERP MCP Server
-│   └── graphConnector.ts         # Microsoft Graph (email + Teams)
+│   ├── erpConnector.ts            # MCP client — spawns & calls the ERP MCP Server
+│   └── graphConnector.ts          # Microsoft Graph (email + Teams)
 ├── mcp/
-│   └── erpMcpServer.ts           # External MCP server — exposes 4 ERP tools via stdio
+│   └── erpMcpServer.ts            # External MCP server — exposes ERP tools via stdio
 ├── services/
-│   ├── riskScoringService.ts     # Weighted risk algorithm + Azure OpenAI
-│   ├── dunningService.ts         # GPT-5 communication generation
-│   └── paymentPlanService.ts     # Payment schedule calculation
+│   ├── riskScoringService.ts      # Weighted risk algorithm + Azure OpenAI
+│   ├── dunningService.ts          # GPT-5 communication generation
+│   └── paymentPlanService.ts      # Payment schedule calculation
+├── chat/
+│   └── collectionsChat.ts         # Terminal chat engine (Azure OpenAI function calling)
 ├── utils/
-│   ├── testAzureOpenAI.ts        # Test Azure OpenAI connectivity
-│   ├── createSampleInvoices.ts   # Create test data in Dynamics 365
-│   └── discoverEntities.ts       # Discover available D365 entities
-├── types.ts                      # TypeScript interfaces
-└── index.ts                      # Main entry point
+│   ├── testAzureOpenAI.ts         # Test Azure OpenAI connectivity
+│   ├── createSampleInvoices.ts    # Create test data in Dynamics 365
+│   └── discoverEntities.ts        # Discover available D365 entities
+├── types.ts                       # TypeScript interfaces
+└── index.ts                       # Main entry point
 examples/
-└── collections-workflow.ts       # Runnable workflow examples
+├── chat.ts                        # Interactive terminal chat (demo)
+├── collections-workflow.ts        # Scripted workflow examples
+└── mcp-client-example.ts          # Direct MCP server interaction examples
+scripts/
+└── package-app.js                 # Creates appPackage ZIP for Teams sideloading
+teamsapp.yml                       # M365 Agents Toolkit deployment configuration
+env/
+└── .env.dev.template              # Environment template for Teams Toolkit
 ```
 
 ## 🔐 Security & Compliance
@@ -256,18 +376,25 @@ examples/
 This project meets the following [Microsoft Agents League - Enterprise Agents](https://github.com/microsoft/agentsleague/tree/main/starter-kits/3-enterprise-agents) competition criteria:
 
 ### Core Requirements ✅
-- **Microsoft 365 Copilot Chat Agent** - Declarative agent configured for M365 Agents Toolkit (`src/agents/declarativeAgent.json`)
+- **Microsoft 365 Copilot Chat Agent** — Complete deployable **Declarative Agent** with Teams App Package (`appPackage/`):
+  - `appPackage/manifest.json` — Teams app manifest registering the declarative agent
+  - `appPackage/declarativeAgent.json` — Agent instructions, conversation starters, and action bindings
+  - `appPackage/apiPlugin.json` — API Plugin connecting Copilot intents to 6 live REST operations
+  - `appPackage/openapi.yaml` — OpenAPI 3.0 spec for the backend REST API
+  - `teamsapp.yml` — M365 Agents Toolkit deployment configuration
+  - `src/api/collectionsApi.ts` — Express REST API backend consumed by the declarative agent
+  - Sideloadable via `npm run package` → upload ZIP to Teams
 
 ### Bonus Features ✅
-- **External MCP Server Integration** - Standalone MCP server (`src/mcp/erpMcpServer.ts`) exposing 4 ERP tools via stdio transport, consumed by an MCP client in `src/connectors/erpConnector.ts`
-- **Adaptive Cards for UI/UX** - Action confirmations use Adaptive Cards in declarative agent
-- **Connected Architecture** - Multiple services (Risk Scoring, Dunning, Payment Plan) working together
+- **External MCP Server Integration** — Standalone MCP server (`src/mcp/erpMcpServer.ts`) exposing 4 ERP tools via stdio transport (JSON-RPC 2.0), consumed by MCP client in `src/connectors/erpConnector.ts`
+- **Adaptive Cards for UI/UX** — Action confirmations use Adaptive Cards in the declarative agent
+- **Connected Architecture** — Five interconnected services: REST API → Collections Agent → Risk Scoring + Dunning + Payment Plan + ERP MCP Server + Microsoft Graph
 
 ### Security & Best Practices ✅
-- Environment-based configuration (`.env.example` provided)
+- Environment-based configuration (`.env.example` provided, `env/.env.dev.template` for Teams Toolkit)
 - No hardcoded secrets
-- Comprehensive `.gitignore` for security
-- Microsoft Entra ID authentication ready
+- Comprehensive `.gitignore` for security (env files, build artifacts gitignored)
+- Microsoft Entra ID authentication — delegated (Graph) + client credentials (D365)
 - Audit logging implemented
 
 ## 📚 Documentation
