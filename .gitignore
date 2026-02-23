@@ -6,7 +6,6 @@ dist/
 *.log
 coverage/
 .DS_Store
-.claude/*
 
 # Security - secrets and credentials
 appsettings.json
@@ -24,6 +23,7 @@ credentials.json
 
 # IDE and OS files
 .vscode/
+.claude/
 .idea/
 .debug-profiles/
 *.swp
