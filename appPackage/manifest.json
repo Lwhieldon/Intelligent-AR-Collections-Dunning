@@ -22,7 +22,7 @@
     "full": "An intelligent AR Collections & Dunning assistant that analyzes payment risk, prioritizes collection efforts, generates personalized dunning communications, and proposes payment plans — powered by Azure OpenAI and Dynamics 365."
   },
   "accentColor": "#0F6CBD",
-  "validDomains": [],
+  "validDomains": ["${{API_DOMAIN}}"],
   "copilotAgents": {
     "declarativeAgents": [
       {
