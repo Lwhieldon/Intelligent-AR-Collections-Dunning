@@ -6,6 +6,7 @@ dist/
 *.log
 coverage/
 .DS_Store
+.claude/*
 
 # Security - secrets and credentials
 appsettings.json

@@ -65,7 +65,22 @@ const ERP_API_ENDPOINT = process.env.ERP_API_ENDPOINT ?? '';
 const ERP_RESOURCE     = process.env.ERP_RESOURCE ?? '';
 const DEMO_MODE        = process.env.DEMO_MODE === 'true';
 
+/** Axios timeout for all D365 API calls (ms). Prevents indefinite hangs. */
+const REQUEST_TIMEOUT_MS = Number(process.env.ERP_REQUEST_TIMEOUT_MS ?? 30_000);
+
+/** Refresh cached token this many ms before it expires. */
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
+
+/** Maximum invoices to retrieve per customer (prevents large payloads). */
+const INVOICE_TOP = Number(process.env.ERP_INVOICE_TOP ?? 500);
+
+/** Number of invoice line-item requests to fire in parallel. */
+const LINE_ITEM_CONCURRENCY = Number(process.env.ERP_LINE_ITEM_CONCURRENCY ?? 5);
+
 let credential: ClientSecretCredential | null = null;
+
+// Cached AAD token — reused across requests until near expiry.
+let tokenCache: { token: string; expiresAt: number } | null = null;
 
 function getCredential(): ClientSecretCredential {
   if (!credential) {
@@ -79,16 +94,51 @@ function getCredential(): ClientSecretCredential {
 }
 
 async function getAccessToken(): Promise<string> {
+  const now = Date.now();
+  if (tokenCache && tokenCache.expiresAt > now + TOKEN_REFRESH_BUFFER_MS) {
+    return tokenCache.token;
+  }
   const scope = ERP_RESOURCE.endsWith('/')
     ? `${ERP_RESOURCE}.default`
     : `${ERP_RESOURCE}/.default`;
   const tokenResponse = await getCredential().getToken(scope);
-  return tokenResponse.token;
+  tokenCache = { token: tokenResponse.token, expiresAt: tokenResponse.expiresOnTimestamp };
+  process.stderr.write('🔑 Acquired new AAD token\n');
+  return tokenCache.token;
 }
 
 // ---------------------------------------------------------------------------
 // ERP data functions
 // ---------------------------------------------------------------------------
+
+/**
+ * Fetch line items for multiple invoices in parallel, respecting LINE_ITEM_CONCURRENCY.
+ * Returns a map of invoiceId → line-item array. Failed individual fetches silently
+ * return an empty array so the caller can fall back to the invoice header amount.
+ */
+async function fetchLineItemsBatched(
+  invoiceIds: string[],
+  token: string,
+): Promise<Map<string, any[]>> {
+  const resultMap = new Map<string, any[]>();
+  for (let i = 0; i < invoiceIds.length; i += LINE_ITEM_CONCURRENCY) {
+    const batch = invoiceIds.slice(i, i + LINE_ITEM_CONCURRENCY);
+    const settled = await Promise.allSettled(
+      batch.map(id =>
+        axios.get(
+          `${ERP_API_ENDPOINT}/invoicedetails?$filter=_invoiceid_value eq ${id}` +
+          `&$select=invoicedetailid,quantity,priceperunit,baseamount,extendedamount`,
+          { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
+        ),
+      ),
+    );
+    batch.forEach((id, j) => {
+      const r = settled[j];
+      resultMap.set(id, r.status === 'fulfilled' ? r.value.data.value : []);
+    });
+  }
+  return resultMap;
+}
 
 async function getARAgingData(customerId: string): Promise<ARAgingData> {
   if (DEMO_MODE) return getMockARAgingData(customerId);
@@ -96,28 +146,39 @@ async function getARAgingData(customerId: string): Promise<ARAgingData> {
   process.stderr.write(`📊 Querying Dynamics 365 for customer: ${customerId}\n`);
   const token = await getAccessToken();
 
-  const accountResponse = await axios.get(
-    `${ERP_API_ENDPOINT}/accounts(${customerId})`,
-    { headers: erpHeaders(token) },
-  );
-  const account = accountResponse.data;
-  process.stderr.write(`✅ Found account: ${account.name ?? customerId}\n`);
-
-  process.stderr.write('📄 Querying invoices for customer...\n');
+  // Fetch account and invoices in parallel — neither depends on the other.
   // Fetch all three D365 calculated amount fields so we have fallbacks.
   // totalamount = sum of line items + tax (may be null on draft invoices)
   // totallineitemamount = sum of line items before tax (often populated when totalamount is not)
   // totalamountlessfreight = totallineitemamount - freight (another fallback)
-  const invoicesResponse = await axios.get(
-    `${ERP_API_ENDPOINT}/invoices?$filter=_customerid_value eq ${customerId} and statecode eq 0` +
-    `&$select=invoiceid,name,totalamount,totallineitemamount,totalamountlessfreight,totaltax,datedelivered,duedate,statecode,statuscode,createdon` +
-    `&$orderby=createdon desc`,
-    { headers: erpHeaders(token) },
-  );
+  process.stderr.write('📄 Querying account + invoices in parallel...\n');
+  const invoiceSelect =
+    'invoiceid,name,totalamount,totallineitemamount,totalamountlessfreight,' +
+    'totaltax,datedelivered,duedate,statecode,statuscode,createdon';
+  const [accountResponse, invoicesResponse] = await Promise.all([
+    axios.get(
+      `${ERP_API_ENDPOINT}/accounts(${customerId})`,
+      { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
+    ),
+    axios.get(
+      `${ERP_API_ENDPOINT}/invoices?$filter=_customerid_value eq ${customerId} and statecode eq 0` +
+      `&$select=${invoiceSelect}` +
+      `&$orderby=createdon desc&$top=${INVOICE_TOP}`,
+      { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
+    ),
+  ]);
+
+  const account = accountResponse.data;
+  process.stderr.write(`✅ Found account: ${account.name ?? customerId}\n`);
+
   const dynamics365Invoices: any[] = invoicesResponse.data.value;
   process.stderr.write(`✅ Found ${dynamics365Invoices.length} invoices\n`);
 
-  process.stderr.write('📦 Fetching line items for invoices...\n');
+  // Fetch all line-item detail sets in parallel batches (replaces N sequential calls).
+  process.stderr.write(`📦 Fetching line items (${LINE_ITEM_CONCURRENCY} parallel)...\n`);
+  const invoiceIds = dynamics365Invoices.map((inv: any) => inv.invoiceid as string);
+  const lineItemsMap = await fetchLineItemsBatched(invoiceIds, token);
+
   // Enrich each invoice: resolve the best available amount across all sources
   for (const invoice of dynamics365Invoices) {
     // D365 header-level fallback chain (server-calculated fields)
@@ -127,32 +188,21 @@ async function getARAgingData(customerId: string): Promise<ARAgingData> {
       (invoice.totalamountlessfreight > 0 ? invoice.totalamountlessfreight : null) ??
       0;
 
-    try {
-      const lineItemsResponse = await axios.get(
-        `${ERP_API_ENDPOINT}/invoicedetails?$filter=_invoiceid_value eq ${invoice.invoiceid}` +
-        `&$select=invoicedetailid,quantity,priceperunit,baseamount,extendedamount`,
-        { headers: erpHeaders(token) },
-      );
-      const lineItems: any[] = lineItemsResponse.data.value;
-
-      let lineItemTotal = 0;
-      for (const li of lineItems) {
-        // extendedamount is D365's calculated quantity*priceperunit; fall back to baseamount
-        // or manual calculation if both are null
-        const liAmount: number =
-          (li.extendedamount > 0 ? li.extendedamount : null) ??
-          (li.baseamount      > 0 ? li.baseamount      : null) ??
-          ((li.quantity != null && li.priceperunit != null) ? li.quantity * li.priceperunit : null) ??
-          0;
-        lineItemTotal += liAmount;
-      }
-
-      // Prefer line-item total if it has a value; fall back to the header amount
-      invoice.totalamount = lineItemTotal > 0 ? lineItemTotal : headerAmount;
-    } catch {
-      // Line-item query failed — fall back to whatever the invoice header says
-      invoice.totalamount = headerAmount;
+    const lineItems: any[] = lineItemsMap.get(invoice.invoiceid) ?? [];
+    let lineItemTotal = 0;
+    for (const li of lineItems) {
+      // extendedamount is D365's calculated quantity*priceperunit; fall back to baseamount
+      // or manual calculation if both are null
+      const liAmount: number =
+        (li.extendedamount > 0 ? li.extendedamount : null) ??
+        (li.baseamount      > 0 ? li.baseamount      : null) ??
+        ((li.quantity != null && li.priceperunit != null) ? li.quantity * li.priceperunit : null) ??
+        0;
+      lineItemTotal += liAmount;
     }
+
+    // Prefer line-item total if it has a value; fall back to the header amount
+    invoice.totalamount = lineItemTotal > 0 ? lineItemTotal : headerAmount;
   }
 
   const result = calculateARAgingFromDynamicsInvoices(account, dynamics365Invoices);
@@ -212,12 +262,12 @@ async function getPaymentHistory(customerId: string): Promise<PaymentHistory> {
     axios.get(
       `${ERP_API_ENDPOINT}/tasks?$filter=_regardingobjectid_value eq ${customerId}` +
       `&$select=subject,actualend,description,statecode,statuscode&$top=50`,
-      { headers: erpHeaders(token) },
+      { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
     ),
     axios.get(
       `${ERP_API_ENDPOINT}/appointments?$filter=_regardingobjectid_value eq ${customerId}` +
       `&$select=subject,scheduledend,description,statuscode,statecode&$top=50`,
-      { headers: erpHeaders(token) },
+      { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
     ),
   ]);
 
@@ -272,7 +322,7 @@ async function getCustomersWithOutstandingBalance(): Promise<string[]> {
     // Use $top=5000 so customers aren't missed when a few accounts have many invoices
     const res = await axios.get(
       `${ERP_API_ENDPOINT}/invoices?$select=_customerid_value&$top=5000`,
-      { headers: erpHeaders(token) },
+      { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
     );
     const ids = new Set<string>();
     for (const inv of res.data.value) {
@@ -282,7 +332,7 @@ async function getCustomersWithOutstandingBalance(): Promise<string[]> {
   } catch {
     const res = await axios.get(
       `${ERP_API_ENDPOINT}/accounts?$select=accountid&$top=50`,
-      { headers: erpHeaders(token) },
+      { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
     );
     return res.data.value.map((a: any) => a.accountid);
   }
@@ -298,7 +348,7 @@ async function updateCustomerNotes(customerId: string, note: string): Promise<vo
   await axios.patch(
     `${ERP_API_ENDPOINT}/accounts(${customerId})`,
     { description: `${note}\n[Updated: ${new Date().toISOString()}]` },
-    { headers: erpHeaders(token) },
+    { headers: erpHeaders(token), timeout: REQUEST_TIMEOUT_MS },
   );
   process.stderr.write(`✅ Updated notes for customer ${customerId} in Dynamics 365\n`);
 }
